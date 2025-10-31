@@ -1,25 +1,328 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import { Brain, Heart, RefreshCw, ArrowRight } from 'lucide-react';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+// This is our main component - the entire app
+function MentalHealthApp() {
+  // STATE: These variables track what's happening in the app
+  // Think of state as the app's "memory"
+  
+  const [currentScreen, setCurrentScreen] = useState('welcome');
+  // Tracks which screen we're on: 'welcome', 'scenario', 'parameters', 'comparison'
+  
+  const [userChoices, setUserChoices] = useState([]);
+  // Stores the choices the user makes (an array/list)
+  
+  const [currentStep, setCurrentStep] = useState(0);
+  // Tracks which step of the scenario we're on (0, 1, 2, etc.)
+  
+  const [parameters, setParameters] = useState({
+    rewardSensitivity: 50,
+    negativeBias: 50,
+    cognitiveLoad: 50
+  });
+  // Stores the depression parameter values (0-100 scale)
+
+  // SCENARIO DATA: This object contains all the story content
+  const scenario = {
+    title: "Morning at School",
+    description: "You arrive at school and see your friends talking by the lockers.",
+    steps: [
+      {
+        situation: "You see your friend group laughing together by the lockers. They haven't noticed you yet.",
+        choices: [
+          { id: 'a', text: "Walk over and join them confidently", value: 'approach' },
+          { id: 'b', text: "Wave and see if they invite you over", value: 'wait' },
+          { id: 'c', text: "Go to your locker alone, they seem busy", value: 'avoid' }
+        ]
+      },
+      {
+        situation: "Your friend asks, 'Hey, did you finish the math homework?' You forgot about it.",
+        choices: [
+          { id: 'a', text: "Say 'Oh no, I completely forgot! Can I see yours?'", value: 'honest' },
+          { id: 'b', text: "Say 'Almost done, I'll finish it during lunch'", value: 'deflect' },
+          { id: 'c', text: "Say 'Yeah' and hope they don't ask more questions", value: 'lie' }
+        ]
+      },
+      {
+        situation: "The teacher announces a group project. Your friends are forming groups.",
+        choices: [
+          { id: 'a', text: "Immediately ask to join your friends' group", value: 'proactive' },
+          { id: 'b', text: "Wait to see if they ask you first", value: 'passive' },
+          { id: 'c', text: "Assume they don't want you and partner with someone else", value: 'withdraw' }
+        ]
+      }
+    ]
+  };
+
+  // FUNCTION: Handle when user makes a choice
+  const handleChoice = (choice) => {
+    // Add this choice to our list of choices
+    setUserChoices([...userChoices, choice]);
+    
+    // If there are more steps, go to next step
+    if (currentStep < scenario.steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // If no more steps, go to parameters screen
+      setCurrentScreen('parameters');
+    }
+  };
+
+  // FUNCTION: Calculate what choice depression would make
+  const getDepressionChoice = (stepChoices, params) => {
+    // This is simplified - you'd make this more sophisticated
+    // Higher negative bias = more likely to choose avoidant options
+    const biasScore = params.negativeBias;
+    
+    if (biasScore > 66) {
+      return stepChoices[2]; // Most avoidant choice
+    } else if (biasScore > 33) {
+      return stepChoices[1]; // Middle choice
+    } else {
+      return stepChoices[0]; // Most proactive choice
+    }
+  };
+
+  // FUNCTION: Reset everything and start over
+  const resetApp = () => {
+    setCurrentScreen('welcome');
+    setUserChoices([]);
+    setCurrentStep(0);
+    setParameters({
+      rewardSensitivity: 50,
+      negativeBias: 50,
+      cognitiveLoad: 50
+    });
+  };
+
+  // RENDER FUNCTIONS: These determine what appears on screen
+  
+  // Welcome Screen
+  if (currentScreen === 'welcome') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="flex items-center justify-center mb-6">
+              <Brain className="w-16 h-16 text-purple-600" />
+            </div>
+            <h1 className="text-4xl font-bold text-center mb-4 text-gray-800">
+              Mental Health Perspective Simulator
+            </h1>
+            <p className="text-lg text-gray-600 text-center mb-8">
+              Experience how depression changes decision-making through the lens of computational psychiatry.
+            </p>
+            <div className="bg-purple-50 border-l-4 border-purple-600 p-4 mb-8">
+              <p className="text-gray-700">
+                <strong>How it works:</strong> You'll navigate a school scenario making your own choices. 
+                Then, we'll show you how someone experiencing depression might navigate the same situation differently, 
+                based on quantifiable parameters from mental health research.
+              </p>
+            </div>
+            <button
+              onClick={() => setCurrentScreen('scenario')}
+              className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
+            >
+              Begin Simulation <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Scenario Screen (where user makes choices)
+  if (currentScreen === 'scenario') {
+    const currentStepData = scenario.steps[currentStep];
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">{scenario.title}</h2>
+              <div className="flex gap-2">
+                {scenario.steps.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`h-2 flex-1 rounded ${
+                      index <= currentStep ? 'bg-purple-600' : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Step {currentStep + 1} of {scenario.steps.length}
+              </p>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-6 mb-6">
+              <p className="text-lg text-gray-800">{currentStepData.situation}</p>
+            </div>
+
+            <div className="space-y-3">
+              <p className="font-semibold text-gray-700 mb-3">What do you do?</p>
+              {currentStepData.choices.map((choice) => (
+                <button
+                  key={choice.id}
+                  onClick={() => handleChoice(choice)}
+                  className="w-full text-left p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition"
+                >
+                  <span className="font-semibold text-purple-600">{choice.id.toUpperCase()}.</span> {choice.text}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Parameters Screen (user adjusts depression parameters)
+  if (currentScreen === 'parameters') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Understanding Depression Parameters</h2>
+            <p className="text-gray-600 mb-8">
+              Depression affects the brain's decision-making through measurable changes. Adjust these parameters 
+              to see how they influence choices in the same scenario you just experienced.
+            </p>
+
+            <div className="space-y-6 mb-8">
+              {/* Reward Sensitivity Parameter */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-2">
+                  Reward Sensitivity: {parameters.rewardSensitivity}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={parameters.rewardSensitivity}
+                  onChange={(e) => setParameters({...parameters, rewardSensitivity: parseInt(e.target.value)})}
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Lower values = positive experiences feel less rewarding (anhedonia)
+                </p>
+              </div>
+
+              {/* Negative Bias Parameter */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-2">
+                  Negative Bias: {parameters.negativeBias}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={parameters.negativeBias}
+                  onChange={(e) => setParameters({...parameters, negativeBias: parseInt(e.target.value)})}
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Higher values = neutral situations interpreted more negatively
+                </p>
+              </div>
+
+              {/* Cognitive Load Parameter */}
+              <div>
+                <label className="block font-semibold text-gray-700 mb-2">
+                  Cognitive Load: {parameters.cognitiveLoad}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={parameters.cognitiveLoad}
+                  onChange={(e) => setParameters({...parameters, cognitiveLoad: parseInt(e.target.value)})}
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Higher values = simple decisions feel overwhelming and exhausting
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setCurrentScreen('comparison')}
+              className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition"
+            >
+              See How Depression Changes Choices
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Comparison Screen (shows user choices vs depression-influenced choices)
+  if (currentScreen === 'comparison') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">The Difference Depression Makes</h2>
+            
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Your Choices Column */}
+              <div className="bg-green-50 rounded-lg p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Heart className="w-6 h-6 text-green-600" />
+                  <h3 className="text-xl font-bold text-green-800">Your Choices</h3>
+                </div>
+                {scenario.steps.map((step, index) => (
+                  <div key={index} className="mb-4">
+                    <p className="text-sm text-gray-600 mb-1">{step.situation}</p>
+                    <p className="font-semibold text-gray-800 bg-white p-3 rounded">
+                      ✓ {userChoices[index].text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Depression-Influenced Choices Column */}
+              <div className="bg-red-50 rounded-lg p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Brain className="w-6 h-6 text-red-600" />
+                  <h3 className="text-xl font-bold text-red-800">With Depression Parameters</h3>
+                </div>
+                {scenario.steps.map((step, index) => {
+                  const depChoice = getDepressionChoice(step.choices, parameters);
+                  return (
+                    <div key={index} className="mb-4">
+                      <p className="text-sm text-gray-600 mb-1">{step.situation}</p>
+                      <p className="font-semibold text-gray-800 bg-white p-3 rounded">
+                        → {depChoice.text}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-purple-50 border-l-4 border-purple-600 p-6 mb-6">
+              <h4 className="font-bold text-gray-800 mb-2">Why This Matters</h4>
+              <p className="text-gray-700">
+                Depression isn't just "feeling sad" - it fundamentally changes how the brain processes information and makes decisions. 
+                These aren't choices people make because they're weak or not trying hard enough. They're the result of measurable 
+                neurological changes that can be treated with proper support and care.
+              </p>
+            </div>
+
+            <button
+              onClick={resetApp}
+              className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" /> Try Again with Different Parameters
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
 
-export default App;
+export default MentalHealthApp;
