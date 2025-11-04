@@ -1,28 +1,19 @@
 import React, { useState } from 'react';
-import { Brain, Heart, RefreshCw, ArrowRight } from 'lucide-react';
+import { Brain, Heart, RefreshCw, ArrowRight, Zap, GraduationCap } from 'lucide-react';
 
-// This is our main component - the entire app
-function MentalHealthApp() {
-  // STATE: These variables track what's happening in the app
-  // Think of state as the app's "memory"
-  
+// ============================================
+// GAME MODE A: SIMPLE VERSION (Original)
+// ============================================
+function SimpleMode() {
   const [currentScreen, setCurrentScreen] = useState('welcome');
-  // Tracks which screen we're on: 'welcome', 'scenario', 'parameters', 'comparison'
-  
   const [userChoices, setUserChoices] = useState([]);
-  // Stores the choices the user makes (an array/list)
-  
   const [currentStep, setCurrentStep] = useState(0);
-  // Tracks which step of the scenario we're on (0, 1, 2, etc.)
-  
   const [parameters, setParameters] = useState({
     rewardSensitivity: 50,
     negativeBias: 50,
     cognitiveLoad: 50
   });
-  // Stores the depression parameter values (0-100 scale)
 
-  // SCENARIO DATA: This object contains all the story content
   const scenario = {
     title: "Morning at School",
     description: "You arrive at school and see your friends talking by the lockers.",
@@ -50,41 +41,48 @@ function MentalHealthApp() {
           { id: 'b', text: "Wait to see if they ask you first", value: 'passive' },
           { id: 'c', text: "Assume they don't want you and partner with someone else", value: 'withdraw' }
         ]
+      },
+      {
+        situation: "You're friend asks what you did over the weekend.",
+        choices: [
+          { id: 'a', text: "Laugh and joke about how you didn't do anything and stayed inside", value: 'confident' },
+          { id: 'b', text: "Respond with a short 'nothing'", value: 'secure' },
+          { id: 'c', text: "Exaggerate and say you went to a bunch of parties", value: 'insecure' }
+        ]
+      },
+      {
+        situation: "You have to leave lunch early",
+        choices: [
+          { id: 'a', text: "Announce your farewell and wave", value: 'self-centered' },
+          { id: 'b', text: "Wait until they stop talking to leave", value: 'others-centered' },
+          { id: 'c', text: "Leave quietly", value: 'self-deprecate' }
+        ]
       }
     ]
   };
 
-  // FUNCTION: Handle when user makes a choice
   const handleChoice = (choice) => {
-    // Add this choice to our list of choices
     setUserChoices([...userChoices, choice]);
-    
-    // If there are more steps, go to next step
     if (currentStep < scenario.steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // If no more steps, go to parameters screen
       setCurrentScreen('parameters');
     }
   };
 
-  // FUNCTION: Calculate what choice depression would make
   const getDepressionChoice = (stepChoices, params) => {
-    // This is simplified - you'd make this more sophisticated
-    // Higher negative bias = more likely to choose avoidant options
     const biasScore = params.negativeBias;
     
     if (biasScore > 66) {
-      return stepChoices[2]; // Most avoidant choice
+      return stepChoices[2];
     } else if (biasScore > 33) {
-      return stepChoices[1]; // Middle choice
+      return stepChoices[1];
     } else {
-      return stepChoices[0]; // Most proactive choice
+      return stepChoices[0];
     }
   };
 
-  // FUNCTION: Reset everything and start over
-  const resetApp = () => {
+  const resetMode = () => {
     setCurrentScreen('welcome');
     setUserChoices([]);
     setCurrentStep(0);
@@ -95,9 +93,6 @@ function MentalHealthApp() {
     });
   };
 
-  // RENDER FUNCTIONS: These determine what appears on screen
-  
-  // Welcome Screen
   if (currentScreen === 'welcome') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
@@ -107,7 +102,7 @@ function MentalHealthApp() {
               <Brain className="w-16 h-16 text-purple-600" />
             </div>
             <h1 className="text-4xl font-bold text-center mb-4 text-gray-800">
-              Mental Health Perspective Simulator
+              Simple Mode
             </h1>
             <p className="text-lg text-gray-600 text-center mb-8">
               Experience how depression changes decision-making through the lens of computational psychiatry.
@@ -131,7 +126,6 @@ function MentalHealthApp() {
     );
   }
 
-  // Scenario Screen (where user makes choices)
   if (currentScreen === 'scenario') {
     const currentStepData = scenario.steps[currentStep];
     
@@ -178,7 +172,6 @@ function MentalHealthApp() {
     );
   }
 
-  // Parameters Screen (user adjusts depression parameters)
   if (currentScreen === 'parameters') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
@@ -191,7 +184,6 @@ function MentalHealthApp() {
             </p>
 
             <div className="space-y-6 mb-8">
-              {/* Reward Sensitivity Parameter */}
               <div>
                 <label className="block font-semibold text-gray-700 mb-2">
                   Reward Sensitivity: {parameters.rewardSensitivity}%
@@ -209,7 +201,6 @@ function MentalHealthApp() {
                 </p>
               </div>
 
-              {/* Negative Bias Parameter */}
               <div>
                 <label className="block font-semibold text-gray-700 mb-2">
                   Negative Bias: {parameters.negativeBias}%
@@ -227,7 +218,6 @@ function MentalHealthApp() {
                 </p>
               </div>
 
-              {/* Cognitive Load Parameter */}
               <div>
                 <label className="block font-semibold text-gray-700 mb-2">
                   Cognitive Load: {parameters.cognitiveLoad}%
@@ -258,7 +248,6 @@ function MentalHealthApp() {
     );
   }
 
-  // Comparison Screen (shows user choices vs depression-influenced choices)
   if (currentScreen === 'comparison') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
@@ -267,7 +256,6 @@ function MentalHealthApp() {
             <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">The Difference Depression Makes</h2>
             
             <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Your Choices Column */}
               <div className="bg-green-50 rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Heart className="w-6 h-6 text-green-600" />
@@ -283,7 +271,6 @@ function MentalHealthApp() {
                 ))}
               </div>
 
-              {/* Depression-Influenced Choices Column */}
               <div className="bg-red-50 rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Brain className="w-6 h-6 text-red-600" />
@@ -313,13 +300,156 @@ function MentalHealthApp() {
             </div>
 
             <button
-              onClick={resetApp}
+              onClick={resetMode}
               className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-5 h-5" /> Try Again with Different Parameters
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+}
+
+// ============================================
+// GAME MODE B: ADVANCED VERSION (Empty - Ready for Your Code)
+// ============================================
+function AdvancedMode() {
+  // TODO: Add your advanced computational psychiatry logic here!
+  // This is where you'll build the more complex version
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-pink-50 p-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <Zap className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">Advanced Mode</h1>
+          <p className="text-gray-600 mb-6">
+            This mode is under construction. You'll build the advanced computational psychiatry model here!
+          </p>
+          <div className="bg-indigo-50 border-l-4 border-indigo-600 p-4 text-left">
+            <p className="text-sm text-gray-700">
+              <strong>Coming soon:</strong> Multi-parameter weighting, choice properties (reward value, social risk), 
+              composite scoring algorithms, and more sophisticated depression modeling.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// MAIN APP: MODE SELECTOR
+// ============================================
+function MentalHealthApp() {
+  const [selectedMode, setSelectedMode] = useState(null);
+
+  if (!selectedMode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center mb-6">
+              <Brain className="w-20 h-20 text-slate-700" />
+            </div>
+            <h1 className="text-5xl font-bold text-gray-800 mb-4">
+              Mental Health Perspective Simulator
+            </h1>
+            <p className="text-xl text-gray-600">
+              Choose your experience level to begin
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition">
+              <div className="flex items-center gap-3 mb-4">
+                <GraduationCap className="w-10 h-10 text-purple-600" />
+                <h2 className="text-2xl font-bold text-gray-800">Simple Mode</h2>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Perfect for introducing the concept of computational psychiatry. Uses a straightforward 
+                model based on negative bias to show how depression affects decision-making.
+              </p>
+              <div className="bg-purple-50 rounded-lg p-4 mb-6">
+                <p className="text-sm font-semibold text-purple-800 mb-2">Features:</p>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• 3 basic depression parameters</li>
+                  <li>• Simple decision tree logic</li>
+                  <li>• Clear before/after comparison</li>
+                  <li>• Great for educational presentations</li>
+                </ul>
+              </div>
+              <button
+                onClick={() => setSelectedMode('simple')}
+                className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition"
+              >
+                Start Simple Mode
+              </button>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition border-2 border-indigo-200">
+              <div className="flex items-center gap-3 mb-4">
+                <Zap className="w-10 h-10 text-indigo-600" />
+                <h2 className="text-2xl font-bold text-gray-800">Advanced Mode</h2>
+              </div>
+              <p className="text-gray-600 mb-6">
+                For deeper exploration of computational psychiatry. Build a sophisticated weighted 
+                composite model with multiple interacting parameters.
+              </p>
+              <div className="bg-indigo-50 rounded-lg p-4 mb-6">
+                <p className="text-sm font-semibold text-indigo-800 mb-2">You'll Create:</p>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• Multiple depression parameters</li>
+                  <li>• Weighted composite scoring</li>
+                  <li>• Choice properties (reward, risk)</li>
+                  <li>• Research-based algorithms</li>
+                </ul>
+              </div>
+              <button
+                onClick={() => setSelectedMode('advanced')}
+                className="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition"
+              >
+                Start Advanced Mode
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-gray-500 text-sm">
+              Both modes demonstrate how depression is a quantifiable neurological condition, not a personal failing.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedMode === 'simple') {
+    return (
+      <div>
+        <button
+          onClick={() => setSelectedMode(null)}
+          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
+        >
+          ← Back to Mode Selection
+        </button>
+        <SimpleMode />
+      </div>
+    );
+  }
+
+  if (selectedMode === 'advanced') {
+    return (
+      <div>
+        <button
+          onClick={() => setSelectedMode(null)}
+          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
+        >
+          ← Back to Mode Selection
+        </button>
+        <AdvancedMode />
       </div>
     );
   }
