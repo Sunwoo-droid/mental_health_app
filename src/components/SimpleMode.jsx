@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Brain, Heart, RefreshCw, ArrowRight, Zap, GraduationCap } from 'lucide-react';
+import { Brain, Heart, RefreshCw, ArrowRight, GraduationCap } from 'lucide-react';
 
 // ============================================
 // GAME MODE A: SIMPLE VERSION (Original)
 // ============================================
-function SimpleMode() {
+function SimpleMode({ setSelectedMode }) { // 👈 Accept setSelectedMode as prop
   const [currentScreen, setCurrentScreen] = useState('welcome');
   const [userChoices, setUserChoices] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
@@ -73,16 +73,21 @@ function SimpleMode() {
   const getDepressionChoice = (stepChoices, params) => {
     const biasScore = params.negativeBias;
     
+    // Simplistic logic based only on Negative Bias
     if (biasScore > 66) {
-      return stepChoices[2];
+      // High Bias chooses the most withdrawing/negative option (index 2)
+      return stepChoices[2]; 
     } else if (biasScore > 33) {
+      // Moderate Bias chooses the passive/deflecting option (index 1)
       return stepChoices[1];
     } else {
+      // Low Bias chooses the assertive/normal option (index 0)
       return stepChoices[0];
     }
   };
 
   const resetMode = () => {
+    // Navigate back to the start of Simple Mode
     setCurrentScreen('welcome');
     setUserChoices([]);
     setCurrentStep(0);
@@ -93,6 +98,12 @@ function SimpleMode() {
     });
   };
 
+  // -----------------
+  // Rendering Logic (omitted for brevity, assume the original JSX is here)
+  // -----------------
+  // ... (The entire rendering structure for 'welcome', 'scenario', 'parameters', and 'comparison' goes here)
+  // ... (Ensure the 'Back to Mode Selection' button uses the setSelectedMode prop: onClick={() => setSelectedMode(null)} )
+  
   if (currentScreen === 'welcome') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-8">
@@ -305,6 +316,12 @@ function SimpleMode() {
             >
               <RefreshCw className="w-5 h-5" /> Try Again with Different Parameters
             </button>
+            <button
+                onClick={() => setSelectedMode(null)} // 👈 Back button to mode selection
+                className="w-full mt-4 bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-600 transition flex items-center justify-center gap-2"
+            >
+                ← Back to Mode Selection
+            </button>
           </div>
         </div>
       </div>
@@ -312,147 +329,4 @@ function SimpleMode() {
   }
 }
 
-// ============================================
-// GAME MODE B: ADVANCED VERSION (Empty - Ready for Your Code)
-// ============================================
-function AdvancedMode() {
-  // TODO: Add your advanced computational psychiatry logic here!
-  // This is where you'll build the more complex version
-  
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-pink-50 p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <Zap className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Advanced Mode</h1>
-          <p className="text-gray-600 mb-6">
-            This mode is under construction. You'll build the advanced computational psychiatry model here!
-          </p>
-          <div className="bg-indigo-50 border-l-4 border-indigo-600 p-4 text-left">
-            <p className="text-sm text-gray-700">
-              <strong>Coming soon:</strong> Multi-parameter weighting, choice properties (reward value, social risk), 
-              composite scoring algorithms, and more sophisticated depression modeling.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// MAIN APP: MODE SELECTOR
-// ============================================
-function MentalHealthApp() {
-  const [selectedMode, setSelectedMode] = useState(null);
-
-  if (!selectedMode) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center mb-6">
-              <Brain className="w-20 h-20 text-slate-700" />
-            </div>
-            <h1 className="text-5xl font-bold text-gray-800 mb-4">
-              Mental Health Perspective Simulator
-            </h1>
-            <p className="text-xl text-gray-600">
-              Choose your experience level to begin
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition">
-              <div className="flex items-center gap-3 mb-4">
-                <GraduationCap className="w-10 h-10 text-purple-600" />
-                <h2 className="text-2xl font-bold text-gray-800">Simple Mode</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Perfect for introducing the concept of computational psychiatry. Uses a straightforward 
-                model based on negative bias to show how depression affects decision-making.
-              </p>
-              <div className="bg-purple-50 rounded-lg p-4 mb-6">
-                <p className="text-sm font-semibold text-purple-800 mb-2">Features:</p>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• 3 basic depression parameters</li>
-                  <li>• Simple decision tree logic</li>
-                  <li>• Clear before/after comparison</li>
-                  <li>• Great for educational presentations</li>
-                </ul>
-              </div>
-              <button
-                onClick={() => setSelectedMode('simple')}
-                className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition"
-              >
-                Start Simple Mode
-              </button>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-lg p-8 hover:shadow-xl transition border-2 border-indigo-200">
-              <div className="flex items-center gap-3 mb-4">
-                <Zap className="w-10 h-10 text-indigo-600" />
-                <h2 className="text-2xl font-bold text-gray-800">Advanced Mode</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                For deeper exploration of computational psychiatry. Build a sophisticated weighted 
-                composite model with multiple interacting parameters.
-              </p>
-              <div className="bg-indigo-50 rounded-lg p-4 mb-6">
-                <p className="text-sm font-semibold text-indigo-800 mb-2">You'll Create:</p>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Multiple depression parameters</li>
-                  <li>• Weighted composite scoring</li>
-                  <li>• Choice properties (reward, risk)</li>
-                  <li>• Research-based algorithms</li>
-                </ul>
-              </div>
-              <button
-                onClick={() => setSelectedMode('advanced')}
-                className="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition"
-              >
-                Start Advanced Mode
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-8 text-center">
-            <p className="text-gray-500 text-sm">
-              Both modes demonstrate how depression is a quantifiable neurological condition, not a personal failing.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (selectedMode === 'simple') {
-    return (
-      <div>
-        <button
-          onClick={() => setSelectedMode(null)}
-          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
-        >
-          ← Back to Mode Selection
-        </button>
-        <SimpleMode />
-      </div>
-    );
-  }
-
-  if (selectedMode === 'advanced') {
-    return (
-      <div>
-        <button
-          onClick={() => setSelectedMode(null)}
-          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
-        >
-          ← Back to Mode Selection
-        </button>
-        <AdvancedMode />
-      </div>
-    );
-  }
-}
-
-export default MentalHealthApp;
+export default SimpleMode;
