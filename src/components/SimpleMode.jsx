@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, Heart, RefreshCw, ArrowRight, GraduationCap } from 'lucide-react';
+import { Brain, Heart, RefreshCw, ArrowRight } from 'lucide-react';
 
 // ============================================
 // GAME MODE A: SIMPLE VERSION (Original)
