@@ -446,9 +446,7 @@ function LearningMode() {
         // TD UPDATE: V(t+1) = V(t) + α[r - V(t)]
         // But we need to interpret reward relative to expectations
         
-        // Expected reward based on current confidence
-        const expectedReward = currentValue;
-        
+        // Expected reward based on current confidence        
         // Actual reward (normalized to 0-10 scale)
         // Positive outcomes (+7) should map to ~8-9
         // Negative outcomes (-4) should map to ~2-3
@@ -967,7 +965,7 @@ function LearningMode() {
               <div className="relative bg-white border-2 border-gray-300" style={{ height: '300px', paddingLeft: '40px', paddingBottom: '30px' }}>
                 {/* Y-axis labels */}
                 <div className="absolute left-2 top-0 text-sm text-gray-600 font-semibold">10</div>
-                <div className="absolute left-2" style={{ top: '50%', transform: 'translateY(-50%)' }} className="text-sm text-gray-600 font-semibold">5</div>
+                <div className="absolute left-2 text-sm text-gray-600 font-semibold" style={{ top: '50%', transform: 'translateY(-50%)' }} >5</div>
                 <div className="absolute left-2 bottom-8 text-sm text-gray-600 font-semibold">0</div>
                 
                 {/* Chart area with visible border */}
