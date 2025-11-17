@@ -16,7 +16,7 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                         Mental Health Perspective Simulator
                     </h1>
                     <p className="text-xl text-gray-600">
-                        Choose your experience level to begin
+                        Choose a mode to begin
                     </p>
                 </div>
 
@@ -75,8 +75,8 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                 </div>
 
                 <div className="mt-8 text-center">
-                    <p className="text-gray-500 text-sm">
-                        Both modes demonstrate how depression is a quantifiable neurological condition, not a personal failing.
+                    <p className="text-black-1000 text-sm">
+                        Through both modes, hopefully you will come to realize that there are quantifiable changes happening in the brain during depression. It's not a feeling, it's a fundamental change in processing.
                     </p>
                 </div>
             </div>

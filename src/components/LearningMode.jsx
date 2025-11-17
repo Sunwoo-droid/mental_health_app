@@ -33,6 +33,10 @@ function LearningMode() {
   // Current position in scenario sequence
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  
+  // Outcome display state
+  const [showingOutcome, setShowingOutcome] = useState(false);
+  const [currentOutcome, setCurrentOutcome] = useState(null);
 
   // ============================================
   // SCENARIO DATA
@@ -354,18 +358,29 @@ function LearningMode() {
     // Record user's choice
     setUserChoices([...userChoices, choice]);
     
-    // Calculate value update (for display, not used in estimation yet)
-    const currentValue = userValueHistory[userValueHistory.length - 1];
+    // Get the outcome for this step
     const step = getCurrentStep();
-    const outcome = step.outcome;
+    setCurrentOutcome(step.outcome);
     
-    // Simple value update for visualization (we'll use actual TD in agent phase)
-    // This is just to show user something is happening
-    const rpe = outcome.reward - currentValue;
-    const estimatedAlpha = rpe > 0 ? 0.5 : 0.5; // Use neutral for now
-    const newValue = Math.max(0, Math.min(10, currentValue + estimatedAlpha * rpe));
+    // Show outcome screen (don't advance yet)
+    setShowingOutcome(true);
+  };
+
+  const handleContinueFromOutcome = () => {
+    // Now that user has seen outcome, record their confidence
+    const lastChoice = userChoices[userChoices.length - 1];
     
-    setUserValueHistory([...userValueHistory, newValue]);
+    if (userChoices.length === 1) {
+      // First choice - replace initial [5]
+      setUserValueHistory([lastChoice.confidenceLevel]);
+    } else {
+      // Subsequent choices - append
+      setUserValueHistory([...userValueHistory, lastChoice.confidenceLevel]);
+    }
+    
+    // Hide outcome screen
+    setShowingOutcome(false);
+    setCurrentOutcome(null);
     
     // Move to next step
     const scenario = getCurrentScenario();
@@ -394,11 +409,11 @@ function LearningMode() {
     // Agent uses actual TD learning equations
     const agentPath = {
       choices: [],
-      valueHistory: [5], // Start neutral
+      valueHistory: [],
       rpeHistory: []
     };
     
-    let currentValue = 5;
+    let currentValue = 5; // Start neutral
     
     // Go through same scenarios
     for (let scenarioIdx = 0; scenarioIdx < scenarios.length; scenarioIdx++) {
@@ -423,12 +438,23 @@ function LearningMode() {
         }
         
         agentPath.choices.push(bestChoice);
+        agentPath.valueHistory.push(currentValue);
         
         // GET OUTCOME (same as what user got)
         const outcome = step.outcome;
         
         // TD UPDATE: V(t+1) = V(t) + α[r - V(t)]
-        const rpe = outcome.reward - currentValue;
+        // But we need to interpret reward relative to expectations
+        
+        // Expected reward based on current confidence
+        const expectedReward = currentValue;
+        
+        // Actual reward (normalized to 0-10 scale)
+        // Positive outcomes (+7) should map to ~8-9
+        // Negative outcomes (-4) should map to ~2-3
+        const normalizedReward = 5 + (outcome.reward * 0.4); // Scale to 0-10
+        
+        const rpe = normalizedReward - currentValue;
         
         // Select learning rate based on outcome sign
         const alpha = rpe > 0 
@@ -438,13 +464,25 @@ function LearningMode() {
         // Apply TD equation
         const newValue = currentValue + (alpha * rpe);
         
-        // Clamp to 0-10 range
+        // Clamp to 0-10 range (but not too aggressively)
         currentValue = Math.max(0, Math.min(10, newValue));
         
-        agentPath.valueHistory.push(currentValue);
         agentPath.rpeHistory.push({ rpe, alpha, reward: outcome.reward });
+        
+        console.log(`Agent Step ${scenarioIdx}-${stepIdx}:`, {
+          choice: bestChoice.text,
+          outcomeReward: outcome.reward,
+          normalizedReward: normalizedReward,
+          rpe: rpe.toFixed(2),
+          alpha: alpha,
+          oldValue: (currentValue - alpha * rpe).toFixed(2),
+          newValue: currentValue.toFixed(2)
+        });
       }
     }
+    
+    // Add final value
+    agentPath.valueHistory.push(currentValue);
     
     setAgentChoices(agentPath.choices);
     setAgentValueHistory(agentPath.valueHistory);
@@ -515,6 +553,71 @@ function LearningMode() {
     const completedSteps = userChoices.length;
     const progressPercent = (completedSteps / totalSteps) * 100;
 
+    // OUTCOME SCREEN (shown after making a choice)
+    if (showingOutcome && currentOutcome) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-50 p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              {/* Progress */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span>{scenario.title}</span>
+                  <span>Step {completedSteps} of {totalSteps}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* What Happened */}
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">What Happened</h2>
+                <div className={`rounded-lg p-6 mb-6 ${
+                  currentOutcome.reward > 0 ? 'bg-green-50 border-2 border-green-300' : 'bg-amber-50 border-2 border-amber-300'
+                }`}>
+                  <p className="text-lg text-gray-800 leading-relaxed">
+                    {currentOutcome.description}
+                  </p>
+                </div>
+
+                {/* Visual feedback */}
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  {currentOutcome.reward > 5 ? (
+                    <>
+                      <span className="text-4xl">😊</span>
+                      <span className="text-lg font-semibold text-green-700">Positive outcome!</span>
+                    </>
+                  ) : currentOutcome.reward > 0 ? (
+                    <>
+                      <span className="text-4xl">🙂</span>
+                      <span className="text-lg font-semibold text-teal-700">Good outcome</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-4xl">😕</span>
+                      <span className="text-lg font-semibold text-amber-700">Challenging outcome</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleContinueFromOutcome}
+                className="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-teal-700 transition flex items-center justify-center gap-2"
+              >
+                Continue <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // CHOICE SCREEN (normal question screen)
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-50 p-8">
         <div className="max-w-4xl mx-auto">
@@ -533,21 +636,23 @@ function LearningMode() {
               </div>
             </div>
 
-            {/* Confidence meter */}
-            <div className="mb-6 p-4 bg-teal-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-gray-700">Your Confidence</span>
-                <span className="text-2xl font-bold text-teal-600">
-                  {userValueHistory[userValueHistory.length - 1].toFixed(1)}/10
-                </span>
+            {/* Confidence meter - only show if we have history */}
+            {userValueHistory.length > 1 && (
+              <div className="mb-6 p-4 bg-teal-50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-gray-700">Your Confidence</span>
+                  <span className="text-2xl font-bold text-teal-600">
+                    {userValueHistory[userValueHistory.length - 1].toFixed(1)}/10
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div 
+                    className="bg-teal-600 h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${(userValueHistory[userValueHistory.length - 1] / 10) * 100}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
-                  className="bg-teal-600 h-3 rounded-full transition-all duration-500"
-                  style={{ width: `${(userValueHistory[userValueHistory.length - 1] / 10) * 100}%` }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* Situation */}
             <div className="bg-blue-50 rounded-lg p-6 mb-6">
@@ -850,43 +955,114 @@ function LearningMode() {
             <div className="bg-gray-50 p-6 rounded-lg mb-8">
               <h3 className="font-bold text-gray-800 mb-4">Confidence Over Time</h3>
               
-              <div className="relative h-64 border-l-2 border-b-2 border-gray-300">
+              {/* DEBUG: Show the data */}
+              <div className="text-xs text-gray-600 mb-2">
+                User data points: {userValueHistory.length} | Agent data points: {agentValueHistory.length}
+              </div>
+              <div className="text-xs text-gray-600 mb-4">
+                User values: [{userValueHistory.join(', ')}]<br/>
+                Agent values: [{agentValueHistory.join(', ')}]
+              </div>
+              
+              <div className="relative bg-white border-2 border-gray-300" style={{ height: '300px', paddingLeft: '40px', paddingBottom: '30px' }}>
                 {/* Y-axis labels */}
-                <div className="absolute left-0 top-0 -ml-8 text-sm text-gray-600">10</div>
-                <div className="absolute left-0 top-1/2 -ml-8 text-sm text-gray-600">5</div>
-                <div className="absolute left-0 bottom-0 -ml-8 text-sm text-gray-600">0</div>
+                <div className="absolute left-2 top-0 text-sm text-gray-600 font-semibold">10</div>
+                <div className="absolute left-2" style={{ top: '50%', transform: 'translateY(-50%)' }} className="text-sm text-gray-600 font-semibold">5</div>
+                <div className="absolute left-2 bottom-8 text-sm text-gray-600 font-semibold">0</div>
                 
-                {/* Grid lines */}
-                <div className="absolute w-full h-px bg-gray-200" style={{ top: '50%' }}></div>
+                {/* Chart area with visible border */}
+                <div className="absolute bg-blue-50" style={{ left: '40px', right: '10px', top: '10px', bottom: '30px', borderLeft: '3px solid #374151', borderBottom: '3px solid #374151' }}>
+                  {/* Grid line at middle */}
+                  <div className="absolute w-full h-px bg-gray-400" style={{ top: '50%' }}></div>
+                  
+                  {userValueHistory.length > 1 ? (
+                    <>
+                      {/* User trajectory (green) */}
+                      <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }} viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <polyline
+                          points={userValueHistory.map((val, idx) => {
+                            const x = (idx / (userValueHistory.length - 1)) * 100;
+                            const y = 100 - (val / 10) * 100;
+                            return `${x},${y}`;
+                          }).join(' ')}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="2"
+                          vectorEffect="non-scaling-stroke"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      
+                      {/* User dots */}
+                      {userValueHistory.map((val, idx) => {
+                        const x = (idx / (userValueHistory.length - 1)) * 100;
+                        const y = 100 - (val / 10) * 100;
+                        return (
+                          <div
+                            key={`user-dot-${idx}`}
+                            className="absolute w-3 h-3 bg-green-600 rounded-full border-2 border-white"
+                            style={{
+                              left: `calc(${x}% - 6px)`,
+                              top: `calc(${y}% - 6px)`
+                            }}
+                          />
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                      No user data
+                    </div>
+                  )}
+                  
+                  {agentValueHistory.length > 1 ? (
+                    <>
+                      {/* Agent trajectory (red) */}
+                      <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }} viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <polyline
+                          points={agentValueHistory.map((val, idx) => {
+                            const x = (idx / (agentValueHistory.length - 1)) * 100;
+                            const y = 100 - (val / 10) * 100;
+                            return `${x},${y}`;
+                          }).join(' ')}
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth="2"
+                          vectorEffect="non-scaling-stroke"
+                          strokeDasharray="5,3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      
+                      {/* Agent dots */}
+                      {agentValueHistory.map((val, idx) => {
+                        const x = (idx / (agentValueHistory.length - 1)) * 100;
+                        const y = 100 - (val / 10) * 100;
+                        return (
+                          <div
+                            key={`agent-dot-${idx}`}
+                            className="absolute w-3 h-3 bg-red-600 rounded-full border-2 border-white"
+                            style={{
+                              left: `calc(${x}% - 6px)`,
+                              top: `calc(${y}% - 6px)`
+                            }}
+                          />
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                      No agent data
+                    </div>
+                  )}
+                </div>
                 
-                {/* User trajectory (green) */}
-                <svg className="absolute inset-0 w-full h-full">
-                  <polyline
-                    points={userValueHistory.map((val, idx) => {
-                      const x = (idx / (userValueHistory.length - 1)) * 100;
-                      const y = 100 - (val / 10) * 100;
-                      return `${x}%,${y}%`;
-                    }).join(' ')}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="3"
-                  />
-                </svg>
-                
-                {/* Agent trajectory (red) */}
-                <svg className="absolute inset-0 w-full h-full">
-                  <polyline
-                    points={agentValueHistory.map((val, idx) => {
-                      const x = (idx / (agentValueHistory.length - 1)) * 100;
-                      const y = 100 - (val / 10) * 100;
-                      return `${x}%,${y}%`;
-                    }).join(' ')}
-                    fill="none"
-                    stroke="#ef4444"
-                    strokeWidth="3"
-                    strokeDasharray="5,5"
-                  />
-                </svg>
+                {/* X-axis label */}
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-sm text-gray-600 font-semibold">
+                  Decision Number
+                </div>
               </div>
 
               <div className="flex justify-center gap-8 mt-4">
@@ -895,7 +1071,7 @@ function LearningMode() {
                   <span className="text-sm text-gray-700">You (α⁺={userParameters.positiveLearningRate}, α⁻={userParameters.negativeLearningRate})</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-1 bg-red-600" style={{ backgroundImage: 'repeating-linear-gradient(to right, #ef4444 0, #ef4444 5px, transparent 5px, transparent 10px)' }}></div>
+                  <div className="w-8 h-1 bg-red-600 opacity-80"></div>
                   <span className="text-sm text-gray-700">Agent (α⁺={agentParameters.positiveLearningRate}, α⁻={agentParameters.negativeLearningRate})</span>
                 </div>
               </div>
