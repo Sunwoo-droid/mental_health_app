@@ -2,3 +2,5 @@
 export { default as SimpleMode } from './SimpleMode';
 export { default as LearningMode } from './LearningMode';
 export { default as ModeSelector } from './ModeSelector';
+export { default as OutcomeMode } from './OutcomeMode';
+export { default as DepressionFilter } from './DepressionFilter';
