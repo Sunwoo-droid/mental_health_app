@@ -757,7 +757,6 @@ function DepressionFilter({ setSelectedMode }) {
   // ============================================
 
   const handleChoice = (choice) => {
-    const node = storyNodes[currentNodeId];
     
     // Record choice
     const updatedChoiceHistory = [...choiceHistory, choice];
@@ -1083,7 +1082,6 @@ function DepressionFilter({ setSelectedMode }) {
   }
 
   if (phase === 'finished') {
-    const finalNode = storyNodes[currentNodeId];
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 p-8">

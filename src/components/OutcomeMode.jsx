@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, TrendingUp, TrendingDown, BarChart3, ArrowRight, RefreshCw, Heart, Zap } from 'lucide-react';
+import { Brain, BarChart3, ArrowRight, RefreshCw, Zap } from 'lucide-react';
 
 // ============================================
 // OUTCOME MODE: Choose-Your-Own-Adventure
