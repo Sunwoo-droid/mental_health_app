@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, Lock, TrendingDown, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { LockClosedIcon, ArrowTrendingDownIcon, ArrowRightIcon, ArrowPathIcon, ExclamationCircleIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
 // ============================================
 // DEPRESSION FILTER MODE
@@ -815,88 +815,97 @@ function DepressionFilter({ setSelectedMode }) {
 
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 p-8">
+      <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-rose-500/30 p-8 mb-6 rounded-lg shadow-xl">
             <div className="flex items-center justify-center mb-6">
-              <Brain className="w-16 h-16 text-red-600" />
+              <div className="p-4 bg-gradient-to-br from-rose-500/20 to-pink-500/20 rounded-2xl border border-rose-500/30">
+                <FunnelIcon className="w-16 h-16 text-rose-400" />
+              </div>
             </div>
-            <h1 className="text-4xl font-bold text-center mb-4 text-gray-800">
+            <h1 className="text-4xl font-medium text-center mb-4 text-slate-100">
               Depression Filter Mode
             </h1>
-            <p className="text-lg text-gray-600 text-center mb-8">
-              Experience how depression's learning rates create a "mental filter" that blocks positive experiences
+            <p className="text-lg text-slate-300 text-center mb-8">
+              Experience what it's like to have depression's "mental filter" - where good experiences barely help, but bad ones hit hard.
             </p>
           </div>
 
           {/* Explanation */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Understanding the Depression Filter</h2>
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 mb-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-medium text-slate-100 mb-4 flex items-center gap-2">
+              <div className="w-1 h-6 bg-gradient-to-b from-rose-500 to-pink-500 rounded-full"></div>
+              Understanding the Depression Filter
+            </h2>
             
             <div className="space-y-6">
-              <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded">
-                <h3 className="font-bold text-gray-800 mb-2">What You'll Experience</h3>
-                <p className="text-gray-700 mb-4">
-                  In this mode, you'll navigate scenarios with <strong>depressed learning rates</strong>:
+              <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 ">
+                <h3 className="font-medium text-slate-100 mb-2">What You'll Experience</h3>
+                <p className="text-slate-300 mb-4">
+                  In this mode, you'll navigate scenarios with <strong>depression-like settings</strong>:
                 </p>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded">
+                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <div className="flex items-center gap-2 mb-2">
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                      <span className="font-semibold text-gray-800">Positive Learning Rate (α⁺)</span>
+                      <div className="p-1.5 bg-green-500/10 rounded-lg">
+                        <ArrowTrendingDownIcon className="w-5 h-5 text-green-400" />
+                      </div>
+                      <span className="font-medium text-slate-100">How much good experiences affect confidence</span>
                     </div>
-                    <p className="text-2xl font-bold text-red-600 mb-1">0.1</p>
-                    <p className="text-sm text-gray-600">
-                      Positive experiences barely register. Even when good things happen, your confidence barely increases.
+                    <p className="text-2xl font-medium text-green-400 mb-1">0.1</p>
+                    <p className="text-sm text-slate-300">
+                      Good experiences barely help. Even when good things happen, your confidence barely increases.
                     </p>
                   </div>
-                  <div className="bg-white p-4 rounded">
+                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <div className="flex items-center gap-2 mb-2">
-                      <TrendingDown className="w-5 h-5 text-red-600" />
-                      <span className="font-semibold text-gray-800">Negative Learning Rate (α⁻)</span>
+                      <div className="p-1.5 bg-red-500/10 rounded-lg">
+                        <ArrowTrendingDownIcon className="w-5 h-5 text-red-400" />
+                      </div>
+                      <span className="font-medium text-slate-100">How much bad experiences affect confidence</span>
                     </div>
-                    <p className="text-2xl font-bold text-red-600 mb-1">0.8</p>
-                    <p className="text-sm text-gray-600">
-                      Negative experiences hit hard. One bad moment can dramatically lower your confidence.
+                    <p className="text-2xl font-medium text-red-400 mb-1">0.8</p>
+                    <p className="text-sm text-slate-300">
+                      Bad experiences hit really hard. One bad moment can dramatically lower your confidence.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
-                <h3 className="font-bold text-gray-800 mb-2">The Mental Filter Effect</h3>
-                <p className="text-gray-700 mb-3">
-                  Because your positive learning rate is so low, your confidence struggles to rise. This creates a "filter" where:
+              <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 ">
+                <h3 className="font-medium text-slate-100 mb-2">The Mental Filter Effect</h3>
+                <p className="text-slate-300 mb-3">
+                  Because good experiences barely help, your confidence struggles to rise. This creates a "filter" where:
                 </p>
-                <ul className="list-disc list-inside space-y-2 text-gray-700">
-                  <li><strong>Choices requiring high confidence are blocked</strong> - You literally cannot choose options that would require confidence higher than your current level</li>
-                  <li><strong>Positive outcomes barely help</strong> - Even when good things happen, your confidence increases by tiny amounts</li>
-                  <li><strong>Negative outcomes are devastating</strong> - Bad experiences cause large drops in confidence</li>
-                  <li><strong>You get "stuck" at low confidence</strong> - The filter prevents you from accessing higher-confidence choices</li>
+                <ul className="list-disc list-inside space-y-2 text-slate-300">
+                  <li><strong>Some choices become unavailable</strong> - You literally cannot choose options that require more confidence than you have</li>
+                  <li><strong>Good outcomes barely help</strong> - Even when good things happen, your confidence increases by tiny amounts</li>
+                  <li><strong>Bad outcomes are devastating</strong> - Bad experiences cause large drops in confidence</li>
+                  <li><strong>You get "stuck" at low confidence</strong> - The filter prevents you from accessing choices that could help you build confidence</li>
                 </ul>
               </div>
 
-              <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                <h3 className="font-bold text-gray-800 mb-2">The TD-Learning Equation</h3>
-                <div className="bg-white p-4 rounded mb-3 font-mono text-sm">
-                  V(t+1) = V(t) + α[r - V(t)]
-                </div>
-                <p className="text-sm text-gray-700 mb-2">With depressed rates:</p>
-                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-                  <li>When <strong>r - V(t) &gt; 0</strong> (positive surprise): α = 0.1 → tiny update</li>
-                  <li>When <strong>r - V(t) &lt; 0</strong> (negative surprise): α = 0.8 → large update</li>
+              <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 rounded-lg">
+                <h3 className="font-medium text-slate-100 mb-2">How It Works</h3>
+                <p className="text-sm text-slate-300 mb-3">
+                  Your confidence changes based on what happens. With depression-like settings:
+                </p>
+                <ul className="text-sm text-slate-300 space-y-2 list-disc list-inside mb-3">
+                  <li>When something <strong>good</strong> happens: Your confidence increases by only a tiny amount (0.1)</li>
+                  <li>When something <strong>bad</strong> happens: Your confidence decreases by a large amount (0.8)</li>
                 </ul>
-                <p className="text-sm text-gray-700 mt-3">
-                  This asymmetry means positive experiences can't accumulate, while negative experiences compound quickly.
+                <p className="text-sm text-slate-300">
+                  This means good experiences can't build up your confidence, while bad experiences quickly bring it down. 
+                  This creates a cycle that's hard to break.
                 </p>
               </div>
 
-              <div className="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+              <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 ">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
+                  <ExclamationCircleIcon className="w-6 h-6 text-slate-400 flex-shrink-0 mt-1" />
                   <div>
-                    <h3 className="font-bold text-gray-800 mb-2">What This Means</h3>
-                    <p className="text-gray-700">
+                    <h3 className="font-medium text-slate-100 mb-2">What This Means</h3>
+                    <p className="text-slate-300">
                       This isn't about "thinking more positively" - it's about a fundamental change in how the brain processes 
                       experiences. The depressed learning rates create a filter that makes it nearly impossible to build confidence, 
                       even when positive things happen. This is why depression is so hard to overcome without treatment - the brain's 
@@ -912,13 +921,13 @@ function DepressionFilter({ setSelectedMode }) {
           <div className="flex gap-4">
             <button
               onClick={() => setPhase('playing')}
-              className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"
+              className="flex-1 bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 px-6 font-medium hover:from-rose-500 hover:to-rose-600 transition-all duration-200 shadow-md hover:shadow-rose-500/50 rounded-lg flex items-center justify-center gap-2"
             >
-              Begin Experience <ArrowRight className="w-5 h-5" />
+              Begin Experience <ArrowRightIcon className="w-5 h-5" />
             </button>
             <button
               onClick={() => setSelectedMode(null)}
-              className="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
+              className="bg-slate-800 text-slate-300 py-3 px-6 border border-slate-700 font-medium hover:bg-slate-700 transition rounded-lg"
             >
               ← Back to Modes
             </button>
@@ -937,22 +946,22 @@ function DepressionFilter({ setSelectedMode }) {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 p-8">
+      <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 rounded-lg shadow-xl">
             {/* Progress indicator */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600">Current Confidence</span>
-                <span className="font-bold text-red-600">{currentValue.toFixed(1)}/10</span>
+                <span className="text-sm text-slate-300">Current Confidence</span>
+                <span className="font-medium text-slate-400">{currentValue.toFixed(1)}/10</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
                 <div 
-                  className="bg-red-600 h-3 rounded-full transition-all"
+                  className="bg-gradient-to-r from-rose-500 to-pink-500 h-3 rounded-full transition-all duration-300"
                   style={{ width: `${(currentValue / 10) * 100}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-slate-400 mt-1">
                 <span>Positive Learning: {positiveLearningRate}</span>
                 <span>Negative Learning: {negativeLearningRate}</span>
               </div>
@@ -967,50 +976,50 @@ function DepressionFilter({ setSelectedMode }) {
               const learningRateUsed = isPositiveChange ? positiveLearningRate : negativeLearningRate;
               
               return (
-                <div className={`rounded-lg p-6 mb-6 border-l-4 ${
+                <div className={`p-6 mb-6 border-l-4 rounded-lg ${
                   isPositiveChange 
-                    ? 'bg-green-50 border-green-600' 
-                    : 'bg-red-50 border-red-600'
+                    ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-green-500' 
+                    : 'bg-gradient-to-br from-red-900/30 to-rose-900/20 border-red-500'
                 }`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-bold text-gray-800 mb-2">Outcome</h3>
-                      <p className="text-gray-700 mb-2">{lastOutcome.description}</p>
+                      <h3 className="font-medium text-slate-100 mb-2">Outcome</h3>
+                      <p className="text-slate-300 mb-2">{lastOutcome.description}</p>
                     </div>
                     <div className={`text-right ml-4 ${
                       isPositiveChange 
-                        ? 'text-green-700' 
-                        : 'text-red-700'
+                        ? 'text-green-400' 
+                        : 'text-red-400'
                     }`}>
-                      <div className="text-2xl font-bold">
+                      <div className="text-2xl font-medium">
                         {lastOutcome.reward > 0 ? '+' : ''}
                         {lastOutcome.reward}
                       </div>
-                      <div className="text-xs text-gray-600 mt-1">Reward</div>
+                      <div className="text-xs text-slate-300 mt-1">Reward</div>
                     </div>
                   </div>
-                  <div className="bg-white rounded p-3 mt-3 border border-gray-200">
+                  <div className="bg-slate-800/50 p-3 mt-3 border border-slate-600 rounded">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Confidence Change:</span>
+                      <span className="text-sm text-slate-300">Confidence Change:</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-slate-300">
                           {previousValue.toFixed(1)}/10
                         </span>
                         <span className="text-gray-400">→</span>
-                        <span className={`font-bold ${
-                          isPositiveChange 
-                            ? 'text-green-600' 
+                        <span className={`font-medium ${
+                          isPositiveChange
+                            ? 'text-green-400'
                             : confidenceChange < 0
-                            ? 'text-red-600'
-                            : 'text-gray-600'
+                            ? 'text-slate-400'
+                            : 'text-slate-300'
                         }`}>
                           {currentValue.toFixed(1)}/10
                         </span>
                         {confidenceChange !== 0 && (
-                          <span className={`text-sm font-semibold ${
-                            isPositiveChange 
-                              ? 'text-green-600' 
-                              : 'text-red-600'
+                          <span className={`text-sm font-medium ${
+                            isPositiveChange
+                              ? 'text-green-400'
+                              : 'text-slate-400'
                           }`}>
                             ({isPositiveChange ? '+' : ''}
                             {confidenceChange.toFixed(2)})
@@ -1028,13 +1037,13 @@ function DepressionFilter({ setSelectedMode }) {
             })()}
 
             {/* Situation */}
-            <div className="bg-red-50 rounded-lg p-6 mb-6">
-              <p className="text-lg text-gray-800">{currentNode.situation}</p>
+            <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 p-6 mb-6 rounded-lg border border-slate-600">
+              <p className="text-lg text-slate-100">{currentNode.situation}</p>
             </div>
 
             {/* Choices */}
             <div className="space-y-3 mb-6">
-              <p className="font-semibold text-gray-700 mb-3">What do you do?</p>
+              <p className="font-medium text-slate-300 mb-3">What do you do?</p>
               {currentNode.choices.map((choice) => {
                 const blocked = isChoiceBlocked(choice);
                 return (
@@ -1042,20 +1051,20 @@ function DepressionFilter({ setSelectedMode }) {
                     key={choice.id}
                     onClick={() => !blocked && handleChoice(choice)}
                     disabled={blocked}
-                    className={`w-full text-left p-4 rounded-lg transition ${
+                    className={`w-full text-left p-4 transition rounded-lg ${
                       blocked
-                        ? 'bg-gray-100 border-2 border-gray-300 cursor-not-allowed opacity-60'
-                        : 'bg-white border-2 border-gray-200 hover:border-red-600 hover:bg-red-50'
+                        ? 'bg-slate-800 border border-slate-600 cursor-not-allowed opacity-60'
+                        : 'bg-slate-800 border border-slate-700 hover:border-slate-600 hover:bg-slate-700/50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className={`font-semibold ${blocked ? 'text-gray-400' : 'text-red-600'}`}>
+                        <span className={`font-medium ${blocked ? 'text-gray-400' : 'text-slate-400'}`}>
                           {choice.id.toUpperCase()}.
                         </span>
                         {blocked && (
                           <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Lock className="w-3 h-3" />
+                            <LockClosedIcon className="w-3 h-3" />
                             <span>Requires confidence {choice.confidenceLevel}/10</span>
                           </div>
                         )}
@@ -1064,9 +1073,9 @@ function DepressionFilter({ setSelectedMode }) {
                         Confidence: {choice.confidenceLevel}/10
                       </span>
                     </div>
-                    <p className={`${blocked ? 'text-gray-400' : 'text-gray-800'}`}>{choice.text}</p>
+                    <p className={`${blocked ? 'text-gray-400' : 'text-slate-100'}`}>{choice.text}</p>
                     {blocked && (
-                      <p className="text-xs text-red-600 mt-2 italic">
+                      <p className="text-xs text-slate-400 mt-2 italic">
                         Blocked: Your current confidence ({currentValue.toFixed(1)}/10) is too low for this choice.
                         The depression filter prevents you from accessing higher-confidence options.
                       </p>
@@ -1084,10 +1093,10 @@ function DepressionFilter({ setSelectedMode }) {
   if (phase === 'finished') {
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 p-8">
+      <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Experience Complete</h2>
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 rounded-lg shadow-xl">
+            <h2 className="text-3xl font-medium text-slate-100 mb-6 text-center">Experience Complete</h2>
             
             {/* Final Outcome - integrated with confidence change */}
             {outcomeHistory.length > 0 && outcomeHistory[outcomeHistory.length - 1] && valueHistory.length >= 2 && (() => {
@@ -1098,50 +1107,50 @@ function DepressionFilter({ setSelectedMode }) {
               const learningRateUsed = isPositiveChange ? positiveLearningRate : negativeLearningRate;
               
               return (
-                <div className={`rounded-lg p-6 mb-6 border-l-4 ${
-                  isPositiveChange 
-                    ? 'bg-green-50 border-green-600' 
-                    : 'bg-red-50 border-red-600'
+                <div className={`p-6 mb-6 border-l-4 rounded-lg ${
+                  isPositiveChange
+                    ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-green-500'
+                    : 'bg-gradient-to-br from-red-900/30 to-rose-900/20 border-red-500'
                 }`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-bold text-gray-800 mb-2">Final Outcome</h3>
-                      <p className="text-gray-700 mb-2">{lastOutcome.description}</p>
+                      <h3 className="font-medium text-slate-100 mb-2">Final Outcome</h3>
+                      <p className="text-slate-300 mb-2">{lastOutcome.description}</p>
                     </div>
                     <div className={`text-right ml-4 ${
-                      isPositiveChange 
-                        ? 'text-green-700' 
-                        : 'text-red-700'
+                      isPositiveChange
+                        ? 'text-green-400'
+                        : 'text-red-400'
                     }`}>
-                      <div className="text-2xl font-bold">
+                      <div className="text-2xl font-medium">
                         {lastOutcome.reward > 0 ? '+' : ''}
                         {lastOutcome.reward}
                       </div>
-                      <div className="text-xs text-gray-600 mt-1">Reward</div>
+                      <div className="text-xs text-slate-300 mt-1">Reward</div>
                     </div>
                   </div>
-                  <div className="bg-white rounded p-3 mt-3 border border-gray-200">
+                  <div className="bg-slate-800/50 p-3 mt-3 border border-slate-600 rounded">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Confidence Change:</span>
+                      <span className="text-sm text-slate-300">Confidence Change:</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-slate-300">
                           {previousValue.toFixed(1)}/10
                         </span>
                         <span className="text-gray-400">→</span>
-                        <span className={`font-bold ${
-                          isPositiveChange 
-                            ? 'text-green-600' 
+                        <span className={`font-medium ${
+                          isPositiveChange
+                            ? 'text-green-400'
                             : confidenceChange < 0
-                            ? 'text-red-600'
-                            : 'text-gray-600'
+                            ? 'text-slate-400'
+                            : 'text-slate-300'
                         }`}>
                           {currentValue.toFixed(1)}/10
                         </span>
                         {confidenceChange !== 0 && (
-                          <span className={`text-sm font-semibold ${
-                            isPositiveChange 
-                              ? 'text-green-600' 
-                              : 'text-red-600'
+                          <span className={`text-sm font-medium ${
+                            isPositiveChange
+                              ? 'text-green-400'
+                              : 'text-slate-400'
                           }`}>
                             ({isPositiveChange ? '+' : ''}
                             {confidenceChange.toFixed(2)})
@@ -1160,60 +1169,60 @@ function DepressionFilter({ setSelectedMode }) {
 
             {/* Final Stats */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-red-50 rounded-lg p-6">
-                <h3 className="font-bold text-gray-800 mb-4">Final Confidence</h3>
-                <div className="text-4xl font-bold text-red-600 mb-2">
+              <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 p-6 rounded-lg border border-slate-600">
+                <h3 className="font-medium text-slate-100 mb-4">Final Confidence</h3>
+                <div className="text-4xl font-medium text-slate-400 mb-2">
                   {currentValue.toFixed(1)}/10
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
+                <div className="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
                   <div 
-                    className="bg-red-600 h-4 rounded-full"
+                    className="bg-gradient-to-r from-rose-500 to-pink-500 h-4 rounded-full transition-all duration-300"
                     style={{ width: `${(currentValue / 10) * 100}%` }}
                   />
                 </div>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-slate-300 mt-2">
                   Notice how your confidence stayed low despite positive experiences. 
                   This is the depression filter in action.
                 </p>
               </div>
 
-              <div className="bg-orange-50 rounded-lg p-6">
-                <h3 className="font-bold text-gray-800 mb-4">Learning Rates Used</h3>
+              <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 p-6 rounded-lg border border-slate-600">
+                <h3 className="font-medium text-slate-100 mb-4">Learning Rates Used</h3>
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600">Positive (α⁺)</span>
-                      <span className="font-bold text-red-600">{positiveLearningRate.toFixed(1)}</span>
+                      <span className="text-sm text-slate-300">Positive (α⁺)</span>
+                      <span className="font-medium text-slate-400">{positiveLearningRate.toFixed(1)}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
                       <div 
-                        className="bg-red-500 h-2 rounded-full"
+                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${(positiveLearningRate / 0.9) * 100}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">Very low - positive experiences barely register</p>
+                    <p className="text-xs text-slate-300 mt-1">Very low - positive experiences barely register</p>
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600">Negative (α⁻)</span>
-                      <span className="font-bold text-red-600">{negativeLearningRate.toFixed(1)}</span>
+                      <span className="text-sm text-slate-300">Negative (α⁻)</span>
+                      <span className="font-medium text-slate-400">{negativeLearningRate.toFixed(1)}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
                       <div 
-                        className="bg-red-500 h-2 rounded-full"
+                        className="bg-gradient-to-r from-red-500 to-rose-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${(negativeLearningRate / 0.9) * 100}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">Very high - negative experiences hit hard</p>
+                    <p className="text-xs text-slate-300 mt-1">Very high - negative experiences hit hard</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Reflection */}
-            <div className="bg-blue-50 border-l-4 border-blue-600 p-6 mb-6">
-              <h3 className="font-bold text-gray-800 mb-2">Reflection</h3>
-              <p className="text-gray-700">
+            <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 border-l-4 border-slate-600 p-6 mb-6 rounded-lg">
+              <h3 className="font-medium text-slate-100 mb-2">Reflection</h3>
+              <p className="text-slate-300">
                 Did you notice how many choices were blocked? How even when positive things happened, your confidence 
                 barely increased? This is what it feels like to have depression - not just "feeling sad," but having 
                 a brain that literally cannot learn from positive experiences. The filter makes it nearly impossible 
@@ -1225,13 +1234,13 @@ function DepressionFilter({ setSelectedMode }) {
             <div className="flex gap-4">
               <button
                 onClick={resetGame}
-                className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"
+                className="flex-1 bg-gradient-to-r from-rose-600 to-rose-700 text-white py-3 px-6 font-medium hover:from-rose-500 hover:to-rose-600 transition-all duration-200 shadow-md hover:shadow-rose-500/50 rounded-lg flex items-center justify-center gap-2"
               >
-                <RefreshCw className="w-5 h-5" /> Play Again
+                <ArrowPathIcon className="w-5 h-5" /> Play Again
               </button>
               <button
                 onClick={() => setSelectedMode(null)}
-                className="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
+                className="bg-slate-800 text-slate-300 py-3 px-6 border border-slate-700 font-medium hover:bg-slate-700 transition rounded-lg"
               >
                 ← Back to Modes
               </button>

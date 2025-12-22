@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Brain, BarChart3, ArrowRight, RefreshCw, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CpuChipIcon, ChartBarIcon, ArrowRightIcon, ArrowPathIcon, BookOpenIcon, HeartIcon, PhoneIcon, AcademicCapIcon, LightBulbIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { storyNodes } from './StoryNodes';
 
 // ============================================
 // OUTCOME MODE: Choose-Your-Own-Adventure
@@ -25,724 +26,47 @@ function OutcomeMode({ setSelectedMode }) {
   // Current position in branching story
   const [currentNodeId, setCurrentNodeId] = useState('start');
   
+  // Track if we're showing an outcome (separate from the situation)
+  const [showingOutcome, setShowingOutcome] = useState(false);
+  const [pendingOutcome, setPendingOutcome] = useState(null);
+  const [pendingNextNodeId, setPendingNextNodeId] = useState(null);
+  
+  // Load agent decisions for comparison
+  const [agentDecisions, setAgentDecisions] = useState(null);
+  
+  useEffect(() => {
+    const agentData = localStorage.getItem('agentDecisions');
+    if (agentData) {
+      try {
+        setAgentDecisions(JSON.parse(agentData));
+      } catch (e) {
+        console.error('Error parsing agent decisions:', e);
+      }
+    }
+  }, [phase]); // Reload when phase changes (e.g., when returning to landing)
+  
   // ============================================
   // BRANCHING SCENARIO STRUCTURE
   // ============================================
+  // storyNodes is imported from StoryNodes.jsx
   // Each node has: id, situation, choices (with nextNodeId), and outcomes based on choice
-  
-  const storyNodes = {
-    start: {
-      id: 'start',
-      situation: "Monday morning at school. You arrive and see your friend group laughing together by the lockers. They haven't noticed you yet.",
-      choices: [
-        {
-          id: 'a',
-          text: "Walk over confidently and join them",
-          confidenceLevel: 8,
-          nextNodeId: 'joined_confidently'
-        },
-        {
-          id: 'b',
-          text: "Wave and see if they invite you over",
-          confidenceLevel: 5,
-          nextNodeId: 'waved'
-        },
-        {
-          id: 'c',
-          text: "Go to your locker alone, they seem busy",
-          confidenceLevel: 2,
-          nextNodeId: 'avoided'
-        }
-      ]
-    },
-    joined_confidently: {
-      id: 'joined_confidently',
-      situation: "You walk over with a smile. Sarah turns and sees you first.",
-      choices: [
-        {
-          id: 'a',
-          text: "Say 'Hey everyone! What's so funny?'",
-          confidenceLevel: 8,
-          nextNodeId: 'engaged_high'
-        },
-        {
-          id: 'b',
-          text: "Just smile and listen to the conversation",
-          confidenceLevel: 6,
-          nextNodeId: 'engaged_medium'
-        }
-      ],
-      outcome: {
-        reward: 7,
-        description: "Sarah smiles warmly. 'Hey! I was hoping I'd see you! How was your weekend?'"
-      }
-    },
-    waved: {
-      id: 'waved',
-      situation: "You wave from a distance. A couple friends notice and wave back.",
-      choices: [
-        {
-          id: 'a',
-          text: "Walk over now that they've acknowledged you",
-          confidenceLevel: 6,
-          nextNodeId: 'joined_after_wave'
-        },
-        {
-          id: 'b',
-          text: "Stay where you are and wait for them to come over",
-          confidenceLevel: 4,
-          nextNodeId: 'waited'
-        }
-      ],
-      outcome: {
-        reward: 5,
-        description: "They wave back with friendly smiles. One friend calls out 'Come over!'"
-      }
-    },
-    avoided: {
-      id: 'avoided',
-      situation: "You head to your locker alone. As you're getting your books, you notice your friends are still laughing together.",
-      choices: [
-        {
-          id: 'a',
-          text: "Go back and join them now",
-          confidenceLevel: 5,
-          nextNodeId: 'joined_late'
-        },
-        {
-          id: 'b',
-          text: "Head to class early",
-          confidenceLevel: 3,
-          nextNodeId: 'left_early'
-        }
-      ],
-      outcome: {
-        reward: 2,
-        description: "You're at your locker alone. The laughter continues behind you."
-      }
-    },
-    engaged_high: {
-      id: 'engaged_high',
-      situation: "You jump into the conversation enthusiastically. Everyone turns to include you.",
-      choices: [
-        {
-          id: 'a',
-          text: "Share a funny story from your weekend",
-          confidenceLevel: 9,
-          nextNodeId: 'shared_story'
-        },
-        {
-          id: 'b',
-          text: "Ask them what they're talking about",
-          confidenceLevel: 7,
-          nextNodeId: 'asked_question'
-        }
-      ],
-      outcome: {
-        reward: 8,
-        description: "The group laughs at your story. 'That's hilarious! You should tell us more!'"
-      }
-    },
-    engaged_medium: {
-      id: 'engaged_medium',
-      situation: "You're listening to the conversation. Someone mentions a party this weekend.",
-      choices: [
-        {
-          id: 'a',
-          text: "Express interest in going",
-          confidenceLevel: 7,
-          nextNodeId: 'interested_party'
-        },
-        {
-          id: 'b',
-          text: "Just nod and smile",
-          confidenceLevel: 5,
-          nextNodeId: 'passive_response'
-        }
-      ],
-      outcome: {
-        reward: 6,
-        description: "They include you in the planning. 'You should come too!'"
-      }
-    },
-    joined_after_wave: {
-      id: 'joined_after_wave',
-      situation: "You walk over and they make space for you in the circle.",
-      choices: [
-        {
-          id: 'a',
-          text: "Thank them and join the conversation",
-          confidenceLevel: 7,
-          nextNodeId: 'thankful_join'
-        },
-        {
-          id: 'b',
-          text: "Stand quietly and listen",
-          confidenceLevel: 5,
-          nextNodeId: 'quiet_listen'
-        }
-      ],
-      outcome: {
-        reward: 6,
-        description: "They welcome you warmly. 'Glad you came over!'"
-      }
-    },
-    waited: {
-      id: 'waited',
-      situation: "You wait, but they don't come over. The conversation continues without you.",
-      choices: [
-        {
-          id: 'a',
-          text: "Finally walk over yourself",
-          confidenceLevel: 4,
-          nextNodeId: 'joined_after_wait'
-        },
-        {
-          id: 'b',
-          text: "Head to class feeling left out",
-          confidenceLevel: 2,
-          nextNodeId: 'felt_left_out'
-        }
-      ],
-      outcome: {
-        reward: 1,
-        description: "You're still standing alone. The bell is about to ring."
-      }
-    },
-    joined_late: {
-      id: 'joined_late',
-      situation: "You walk back over. The conversation has moved on to a different topic.",
-      choices: [
-        {
-          id: 'a',
-          text: "Ask what you missed",
-          confidenceLevel: 5,
-          nextNodeId: 'caught_up'
-        },
-        {
-          id: 'b',
-          text: "Try to follow along silently",
-          confidenceLevel: 3,
-          nextNodeId: 'silent_follow'
-        }
-      ],
-      outcome: {
-        reward: 4,
-        description: "They briefly explain, but the moment has passed. The bell rings."
-      }
-    },
-    left_early: {
-      id: 'left_early',
-      situation: "You're in class early, sitting alone. Your friends arrive together, still laughing.",
-      choices: [
-        {
-          id: 'a',
-          text: "Wave them over to sit with you",
-          confidenceLevel: 4,
-          nextNodeId: 'invited_friends'
-        },
-        {
-          id: 'b',
-          text: "Stay in your seat, feeling isolated",
-          confidenceLevel: 2,
-          nextNodeId: 'isolated'
-        }
-      ],
-      outcome: {
-        reward: -2,
-        description: "They sit together in a different row. You're alone in the front."
-      }
-    },
-    shared_story: {
-      id: 'shared_story',
-      situation: "The group loves your story! They're asking you more questions.",
-      choices: [
-        {
-          id: 'a',
-          text: "Continue engaging enthusiastically",
-          confidenceLevel: 9,
-          nextNodeId: 'high_engagement'
-        },
-        {
-          id: 'b',
-          text: "Feel a bit overwhelmed and tone it down",
-          confidenceLevel: 6,
-          nextNodeId: 'moderate_engagement'
-        }
-      ],
-      outcome: {
-        reward: 9,
-        description: "You're the center of attention in the best way. Everyone is engaged and laughing."
-      }
-    },
-    asked_question: {
-      id: 'asked_question',
-      situation: "They explain the joke. You get it and laugh along.",
-      choices: [
-        {
-          id: 'a',
-          text: "Add your own comment to the joke",
-          confidenceLevel: 7,
-          nextNodeId: 'added_to_joke'
-        },
-        {
-          id: 'b',
-          text: "Just laugh and enjoy the moment",
-          confidenceLevel: 6,
-          nextNodeId: 'enjoyed_moment'
-        }
-      ],
-      outcome: {
-        reward: 7,
-        description: "Your comment gets another laugh. The group feels cohesive and fun."
-      }
-    },
-    interested_party: {
-      id: 'interested_party',
-      situation: "They're excited you want to come! They start making plans.",
-      choices: [
-        {
-          id: 'a',
-          text: "Offer to help organize",
-          confidenceLevel: 8,
-          nextNodeId: 'organizer'
-        },
-        {
-          id: 'b',
-          text: "Just confirm you'll be there",
-          confidenceLevel: 6,
-          nextNodeId: 'confirmed'
-        }
-      ],
-      outcome: {
-        reward: 8,
-        description: "'Great! We'll text you the details. It's going to be so fun!'"
-      }
-    },
-    passive_response: {
-      id: 'passive_response',
-      situation: "You nod along, but don't say much. The conversation continues.",
-      choices: [
-        {
-          id: 'a',
-          text: "Try to add something to the conversation",
-          confidenceLevel: 5,
-          nextNodeId: 'tried_to_engage'
-        },
-        {
-          id: 'b',
-          text: "Continue being quiet",
-          confidenceLevel: 3,
-          nextNodeId: 'stayed_quiet'
-        }
-      ],
-      outcome: {
-        reward: 4,
-        description: "You're included but not really participating. The moment feels a bit awkward."
-      }
-    },
-    thankful_join: {
-      id: 'thankful_join',
-      situation: "You express gratitude and jump into the conversation.",
-      choices: [
-        {
-          id: 'a',
-          text: "Share something about your weekend",
-          confidenceLevel: 7,
-          nextNodeId: 'shared_weekend'
-        },
-        {
-          id: 'b',
-          text: "Ask about their plans",
-          confidenceLevel: 6,
-          nextNodeId: 'asked_plans'
-        }
-      ],
-      outcome: {
-        reward: 7,
-        description: "The conversation flows naturally. You feel included and valued."
-      }
-    },
-    quiet_listen: {
-      id: 'quiet_listen',
-      situation: "You're standing there but not saying much. Someone notices.",
-      choices: [
-        {
-          id: 'a',
-          text: "When asked, share your thoughts",
-          confidenceLevel: 6,
-          nextNodeId: 'shared_when_asked'
-        },
-        {
-          id: 'b',
-          text: "Say 'nothing much' and stay quiet",
-          confidenceLevel: 3,
-          nextNodeId: 'stayed_quiet_2'
-        }
-      ],
-      outcome: {
-        reward: 5,
-        description: "They try to include you, but you're not contributing much to the conversation."
-      }
-    },
-    joined_after_wait: {
-      id: 'joined_after_wait',
-      situation: "You finally walk over. They notice you and make space.",
-      choices: [
-        {
-          id: 'a',
-          text: "Apologize for being late to join",
-          confidenceLevel: 4,
-          nextNodeId: 'apologized'
-        },
-        {
-          id: 'b',
-          text: "Just join naturally without explanation",
-          confidenceLevel: 6,
-          nextNodeId: 'natural_join'
-        }
-      ],
-      outcome: {
-        reward: 5,
-        description: "They welcome you, but you feel like you missed the best part of the conversation."
-      }
-    },
-    felt_left_out: {
-      id: 'felt_left_out',
-      situation: "You're walking to class alone, feeling excluded.",
-      choices: [
-        {
-          id: 'a',
-          text: "Try to catch up and walk with them",
-          confidenceLevel: 3,
-          nextNodeId: 'caught_up_walk'
-        },
-        {
-          id: 'b',
-          text: "Accept it and go to class alone",
-          confidenceLevel: 2,
-          nextNodeId: 'accepted_isolation'
-        }
-      ],
-      outcome: {
-        reward: -3,
-        description: "You're in class now, sitting alone. The morning didn't go as you hoped."
-      }
-    },
-    caught_up: {
-      id: 'caught_up',
-      situation: "They explain briefly, but the conversation momentum is gone.",
-      choices: [
-        {
-          id: 'a',
-          text: "Try to restart the conversation",
-          confidenceLevel: 5,
-          nextNodeId: 'restarted_convo'
-        },
-        {
-          id: 'b',
-          text: "Accept it and move on",
-          confidenceLevel: 4,
-          nextNodeId: 'moved_on'
-        }
-      ],
-      outcome: {
-        reward: 4,
-        description: "The bell rings. You're together, but the connection feels weaker."
-      }
-    },
-    silent_follow: {
-      id: 'silent_follow',
-      situation: "You're trying to follow along but feeling out of the loop.",
-      choices: [
-        {
-          id: 'a',
-          text: "Ask a clarifying question",
-          confidenceLevel: 4,
-          nextNodeId: 'asked_clarification'
-        },
-        {
-          id: 'b',
-          text: "Give up and wait for class",
-          confidenceLevel: 2,
-          nextNodeId: 'gave_up'
-        }
-      ],
-      outcome: {
-        reward: 2,
-        description: "You're confused and disconnected. The moment feels awkward."
-      }
-    },
-    invited_friends: {
-      id: 'invited_friends',
-      situation: "You wave them over. They look at you, then at each other.",
-      choices: [
-        {
-          id: 'a',
-          text: "Smile and gesture more enthusiastically",
-          confidenceLevel: 5,
-          nextNodeId: 'enthusiastic_invite'
-        },
-        {
-          id: 'b',
-          text: "Feel self-conscious and stop waving",
-          confidenceLevel: 2,
-          nextNodeId: 'stopped_inviting'
-        }
-      ],
-      outcome: {
-        reward: 3,
-        description: "One friend comes over. 'Sorry, we didn't see you earlier.'"
-      }
-    },
-    isolated: {
-      id: 'isolated',
-      situation: "You're sitting alone. Class is about to start.",
-      choices: [
-        {
-          id: 'a',
-          text: "Try to make eye contact and smile",
-          confidenceLevel: 3,
-          nextNodeId: 'tried_connection'
-        },
-        {
-          id: 'b',
-          text: "Focus on class and ignore the feeling",
-          confidenceLevel: 2,
-          nextNodeId: 'focused_class'
-        }
-      ],
-      outcome: {
-        reward: -4,
-        description: "Class starts. You're alone, and the morning feels like a failure."
-      }
-    },
-    // Terminal nodes (end of story branches)
-    high_engagement: {
-      id: 'high_engagement',
-      situation: "The morning has been amazing! You feel confident and connected.",
-      isTerminal: true,
-      outcome: {
-        reward: 10,
-        description: "You've had a fantastic morning. Your confidence is high, and you feel truly part of the group."
-      }
-    },
-    moderate_engagement: {
-      id: 'moderate_engagement',
-      situation: "The morning was good. You feel okay but maybe a bit tired.",
-      isTerminal: true,
-      outcome: {
-        reward: 6,
-        description: "It was a decent morning. You're included, but you feel like you could have engaged more."
-      }
-    },
-    added_to_joke: {
-      id: 'added_to_joke',
-      situation: "You're feeling good! The group dynamic is positive.",
-      isTerminal: true,
-      outcome: {
-        reward: 8,
-        description: "Great morning! You contributed to the fun and feel valued by your friends."
-      }
-    },
-    enjoyed_moment: {
-      id: 'enjoyed_moment',
-      situation: "You're content. The morning was pleasant.",
-      isTerminal: true,
-      outcome: {
-        reward: 7,
-        description: "A nice, comfortable morning with friends. Nothing spectacular, but solid."
-      }
-    },
-    organizer: {
-      id: 'organizer',
-      situation: "You're excited about the party and feel included in planning!",
-      isTerminal: true,
-      outcome: {
-        reward: 9,
-        description: "You're helping organize! This feels great - you're an important part of the group."
-      }
-    },
-    confirmed: {
-      id: 'confirmed',
-      situation: "You're going to the party! Feeling good about it.",
-      isTerminal: true,
-      outcome: {
-        reward: 7,
-        description: "You're included in the plans. Looking forward to the weekend!"
-      }
-    },
-    tried_to_engage: {
-      id: 'tried_to_engage',
-      situation: "You made an effort. That counts for something.",
-      isTerminal: true,
-      outcome: {
-        reward: 5,
-        description: "You tried, but the conversation didn't quite click. Still, you made the effort."
-      }
-    },
-    stayed_quiet: {
-      id: 'stayed_quiet',
-      situation: "The morning passed quietly. You were there but not really present.",
-      isTerminal: true,
-      outcome: {
-        reward: 3,
-        description: "You were physically present but emotionally distant. The morning felt empty."
-      }
-    },
-    shared_weekend: {
-      id: 'shared_weekend',
-      situation: "You opened up and shared. That felt good.",
-      isTerminal: true,
-      outcome: {
-        reward: 7,
-        description: "Sharing felt vulnerable but rewarding. Your friends listened and responded warmly."
-      }
-    },
-    asked_plans: {
-      id: 'asked_plans',
-      situation: "You showed interest in their lives. That's connection.",
-      isTerminal: true,
-      outcome: {
-        reward: 6,
-        description: "Good conversation! You're building connections by showing genuine interest."
-      }
-    },
-    shared_when_asked: {
-      id: 'shared_when_asked',
-      situation: "You responded when invited. That's progress.",
-      isTerminal: true,
-      outcome: {
-        reward: 5,
-        description: "You shared when prompted. It was okay, but you wish you'd been more proactive."
-      }
-    },
-    stayed_quiet_2: {
-      id: 'stayed_quiet_2',
-      situation: "You stayed quiet. The opportunity passed.",
-      isTerminal: true,
-      outcome: {
-        reward: 3,
-        description: "You didn't engage when given the chance. The moment feels like a missed opportunity."
-      }
-    },
-    apologized: {
-      id: 'apologized',
-      situation: "You apologized, but maybe unnecessarily.",
-      isTerminal: true,
-      outcome: {
-        reward: 4,
-        description: "They say 'no worries' but you still feel like you did something wrong."
-      }
-    },
-    natural_join: {
-      id: 'natural_join',
-      situation: "You joined naturally. That felt right.",
-      isTerminal: true,
-      outcome: {
-        reward: 6,
-        description: "You recovered well. The morning ended on a positive note."
-      }
-    },
-    caught_up_walk: {
-      id: 'caught_up_walk',
-      situation: "You tried to reconnect. That took courage.",
-      isTerminal: true,
-      outcome: {
-        reward: 2,
-        description: "You caught up, but the connection feels strained. The morning was hard."
-      }
-    },
-    accepted_isolation: {
-      id: 'accepted_isolation',
-      situation: "You accepted the isolation. That's heavy.",
-      isTerminal: true,
-      outcome: {
-        reward: -5,
-        description: "You're alone in class. The morning reinforced feelings of exclusion and loneliness."
-      }
-    },
-    restarted_convo: {
-      id: 'restarted_convo',
-      situation: "You tried to restart. That's resilience.",
-      isTerminal: true,
-      outcome: {
-        reward: 4,
-        description: "You made an effort to reconnect. It's not perfect, but you're trying."
-      }
-    },
-    moved_on: {
-      id: 'moved_on',
-      situation: "You moved on. Sometimes that's necessary.",
-      isTerminal: true,
-      outcome: {
-        reward: 3,
-        description: "You let it go. The morning was okay, nothing special."
-      }
-    },
-    asked_clarification: {
-      id: 'asked_clarification',
-      situation: "You asked for help. That's brave.",
-      isTerminal: true,
-      outcome: {
-        reward: 3,
-        description: "They explain, but you still feel a bit out of the loop. The morning was confusing."
-      }
-    },
-    gave_up: {
-      id: 'gave_up',
-      situation: "You gave up. That's hard.",
-      isTerminal: true,
-      outcome: {
-        reward: -3,
-        description: "You stopped trying. The morning feels like a series of missed connections."
-      }
-    },
-    enthusiastic_invite: {
-      id: 'enthusiastic_invite',
-      situation: "You persisted. That matters.",
-      isTerminal: true,
-      outcome: {
-        reward: 4,
-        description: "One friend came over. It's not the whole group, but it's something."
-      }
-    },
-    stopped_inviting: {
-      id: 'stopped_inviting',
-      situation: "You stopped trying. That's painful.",
-      isTerminal: true,
-      outcome: {
-        reward: -4,
-        description: "You gave up. Sitting alone, the morning feels like a complete failure."
-      }
-    },
-    tried_connection: {
-      id: 'tried_connection',
-      situation: "You tried to connect. That's something.",
-      isTerminal: true,
-      outcome: {
-        reward: 1,
-        description: "You made eye contact, but nothing came of it. The morning was lonely."
-      }
-    },
-    focused_class: {
-      id: 'focused_class',
-      situation: "You focused on class. Sometimes that's a coping mechanism.",
-      isTerminal: true,
-      outcome: {
-        reward: -2,
-        description: "You're in class, but the morning's isolation weighs on you."
-      }
-    }
-  };
 
   // ============================================
   // TD LEARNING FUNCTIONS
   // ============================================
 
+  // Convert reward from 1-8 scale to -10 to +10 scale
+  // 1 → -10, 4.5 → 0, 8 → +10
+  const convertRewardToDisplayScale = (reward) => {
+    return ((reward - 4.5) / 3.5) * 10;
+  };
+
   const updateValueWithTD = (reward, currentVal) => {
-    // Normalize reward to 0-10 scale (assuming reward is -10 to +10)
-    const normalizedReward = 5 + (reward * 0.4);
+    // Convert reward from 1-8 scale to -10 to +10 scale
+    const convertedReward = convertRewardToDisplayScale(reward);
+    
+    // Normalize reward to 0-10 scale for TD learning
+    const normalizedReward = 5 + (convertedReward * 0.5);
     
     // Calculate Reward Prediction Error
     const rpe = normalizedReward - currentVal;
@@ -772,18 +96,19 @@ function OutcomeMode({ setSelectedMode }) {
       const nextConf = choiceHistory[i + 1]?.confidenceLevel || 5;
       
       const confidenceChange = nextConf - currentConf;
+      const convertedReward = convertRewardToDisplayScale(outcome.reward);
       
-      if (outcome.reward > 0) {
+      if (convertedReward > 0) {
         positiveUpdates.push({
-          reward: outcome.reward,
+          reward: convertedReward,
           change: confidenceChange,
-          impliedAlpha: Math.max(0, confidenceChange / outcome.reward)
+          impliedAlpha: Math.max(0, confidenceChange / convertedReward)
         });
-      } else if (outcome.reward < 0) {
+      } else if (convertedReward < 0) {
         negativeUpdates.push({
-          reward: outcome.reward,
+          reward: convertedReward,
           change: confidenceChange,
-          impliedAlpha: Math.max(0, -confidenceChange / Math.abs(outcome.reward))
+          impliedAlpha: Math.max(0, -confidenceChange / Math.abs(convertedReward))
         });
       }
     }
@@ -811,8 +136,6 @@ function OutcomeMode({ setSelectedMode }) {
   // ============================================
 
   const handleChoice = (choice) => {
-    const node = storyNodes[currentNodeId];
-    
     // Record choice
     const updatedChoiceHistory = [...choiceHistory, choice];
     setChoiceHistory(updatedChoiceHistory);
@@ -822,51 +145,58 @@ function OutcomeMode({ setSelectedMode }) {
     let updatedValueHistory = [...valueHistory];
     let updatedCurrentValue = currentValue;
     
-    // Get outcome (if this node has one)
-    if (node.outcome) {
-      updatedOutcomeHistory = [...updatedOutcomeHistory, node.outcome];
-      
-      // Update value using TD learning with current value
-      updatedCurrentValue = updateValueWithTD(node.outcome.reward, updatedCurrentValue);
-      updatedValueHistory = [...updatedValueHistory, updatedCurrentValue];
-      
-      // Calculate RPE for history
-      const normalizedReward = 5 + (node.outcome.reward * 0.4);
-      const rpe = normalizedReward - currentValue;
-      const alpha = rpe > 0 ? positiveLearningRate : negativeLearningRate;
-      setRpeHistory([...rpeHistory, { rpe, alpha, reward: node.outcome.reward }]);
-      
-      // Update state
-      setOutcomeHistory(updatedOutcomeHistory);
-      setCurrentValue(updatedCurrentValue);
-      setValueHistory(updatedValueHistory);
-      
-      // Update learning rates based on behavior
-      const estimated = estimateLearningRates();
-      setPositiveLearningRate(estimated.positiveLearningRate);
-      setNegativeLearningRate(estimated.negativeLearningRate);
-    }
-    
-    // Move to next node
-    if (choice.nextNodeId) {
-      const nextNode = storyNodes[choice.nextNodeId];
-      if (nextNode.isTerminal) {
-        // Handle terminal node - add its outcome to the choice we just made
-        if (nextNode.outcome) {
-          // Add terminal outcome - this corresponds to the choice we just made
-          const finalOutcomeHistory = [...updatedOutcomeHistory, nextNode.outcome];
-          const finalValue = updateValueWithTD(nextNode.outcome.reward, updatedCurrentValue);
-          const finalValueHistory = [...updatedValueHistory, finalValue];
+      // Move to next node
+      if (choice.nextNodeId) {
+        const nextNode = storyNodes[choice.nextNodeId];
+        
+        // When you make a choice at node A to go to node B:
+        // 1. Show the outcome from node B (describes what happened as a result of your choice)
+        // 2. After acknowledging the outcome, show node B's situation
+        
+        if (nextNode && nextNode.outcome) {
+          // Record the outcome
+          updatedOutcomeHistory = [...updatedOutcomeHistory, nextNode.outcome];
           
-          setOutcomeHistory(finalOutcomeHistory);
-          setCurrentValue(finalValue);
-          setValueHistory(finalValueHistory);
+          // Update value using TD learning
+          updatedCurrentValue = updateValueWithTD(nextNode.outcome.reward, updatedCurrentValue);
+          updatedValueHistory = [...updatedValueHistory, updatedCurrentValue];
+          
+          // Calculate RPE for history
+          const convertedReward = convertRewardToDisplayScale(nextNode.outcome.reward);
+          const normalizedReward = 5 + (convertedReward * 0.5);
+          const rpe = normalizedReward - currentValue;
+          const alpha = rpe > 0 ? positiveLearningRate : negativeLearningRate;
+          setRpeHistory([...rpeHistory, { rpe, alpha, reward: convertedReward }]);
+          
+          // Update state
+          setOutcomeHistory(updatedOutcomeHistory);
+          setCurrentValue(updatedCurrentValue);
+          setValueHistory(updatedValueHistory);
+          
+          // Update learning rates based on behavior
+          const estimated = estimateLearningRates();
+          setPositiveLearningRate(estimated.positiveLearningRate);
+          setNegativeLearningRate(estimated.negativeLearningRate);
+          
+          // Show outcome before showing the next situation
+          setPendingOutcome(nextNode.outcome);
+          setPendingNextNodeId(choice.nextNodeId);
+          setShowingOutcome(true);
+        } else {
+          // No outcome, just navigate to next node
+          setCurrentNodeId(choice.nextNodeId);
         }
-        setPhase('finished');
-      } else {
-        setCurrentNodeId(choice.nextNodeId);
       }
+  };
+
+  const handleOutcomeAcknowledged = () => {
+    // Navigate to the next node and show its situation
+    if (pendingNextNodeId) {
+      setCurrentNodeId(pendingNextNodeId);
     }
+    setShowingOutcome(false);
+    setPendingOutcome(null);
+    setPendingNextNodeId(null);
   };
 
   const resetGame = () => {
@@ -879,7 +209,25 @@ function OutcomeMode({ setSelectedMode }) {
     setPositiveLearningRate(0.5);
     setNegativeLearningRate(0.5);
     setCurrentNodeId('start');
+    setShowingOutcome(false);
+    setPendingOutcome(null);
+    setPendingNextNodeId(null);
+    // Clear stored user decisions when resetting
+    localStorage.removeItem('userDecisions');
   };
+
+  // Store user decisions when game finishes
+  useEffect(() => {
+    if (phase === 'finished' && choiceHistory.length > 0) {
+      const userDecisions = {
+        choices: choiceHistory,
+        outcomes: outcomeHistory,
+        valueHistory: valueHistory,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('userDecisions', JSON.stringify(userDecisions));
+    }
+  }, [phase, choiceHistory, outcomeHistory, valueHistory]);
 
   // ============================================
   // RENDER FUNCTIONS
@@ -894,77 +242,83 @@ function OutcomeMode({ setSelectedMode }) {
     const minConfidence = valueHistory.length > 0 ? Math.min(...valueHistory).toFixed(1) : '5.0';
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-8">
+      <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 p-8 mb-6 rounded-lg shadow-xl">
             <div className="flex items-center justify-center mb-6">
-              <Zap className="w-16 h-16 text-indigo-600" />
+              <div className="p-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl border border-indigo-500/30">
+                <BookOpenIcon className="w-16 h-16 text-indigo-400" />
+              </div>
             </div>
-            <h1 className="text-4xl font-bold text-center mb-4 text-gray-800">
+            <h1 className="text-4xl font-semibold text-center mb-4 text-slate-100">
               Outcome Mode
             </h1>
-            <p className="text-lg text-gray-600 text-center mb-8">
-              Your choices shape the story. Experience how your decisions influence outcomes and track your confidence in real-time.
+            <p className="text-lg text-slate-300 text-center mb-8 leading-relaxed">
+              Get an evaluation of your "depression" levels using confidence levels and learning rates.
             </p>
           </div>
 
           {/* Stats Dashboard */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-6 rounded-lg shadow-lg hover:border-indigo-500/50 transition-all">
               <div className="flex items-center gap-3 mb-4">
-                <Brain className="w-8 h-8 text-indigo-600" />
-                <h2 className="text-2xl font-bold text-gray-800">Your Stats</h2>
+                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                  <CpuChipIcon className="w-8 h-8 text-indigo-400" />
+                </div>
+                <h2 className="text-2xl font-semibold text-slate-100">Your Stats</h2>
               </div>
               
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Current Confidence</span>
-                    <span className="font-bold text-indigo-600">{currentValue.toFixed(1)}/10</span>
+                    <span className="text-slate-400">Current Confidence</span>
+                    <span className="font-semibold text-slate-200">{currentValue.toFixed(1)}/10</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
                     <div 
-                      className="bg-indigo-600 h-3 rounded-full transition-all"
+                      className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-3 transition-all duration-500 rounded-full shadow-lg"
                       style={{ width: `${(currentValue / 10) * 100}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-700">
                   <div>
-                    <p className="text-sm text-gray-500">Average</p>
-                    <p className="text-xl font-bold text-gray-800">{avgConfidence}</p>
+                    <p className="text-sm text-slate-400">Average</p>
+                    <p className="text-xl font-semibold text-slate-100">{avgConfidence}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Highest</p>
-                    <p className="text-xl font-bold text-green-600">{maxConfidence}</p>
+                    <p className="text-sm text-slate-400">Highest</p>
+                    <p className="text-xl font-semibold text-slate-300">{maxConfidence}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Lowest</p>
-                    <p className="text-xl font-bold text-red-600">{minConfidence}</p>
+                    <p className="text-sm text-slate-400">Lowest</p>
+                    <p className="text-xl font-semibold text-slate-400">{minConfidence}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-6 rounded-lg shadow-lg hover:border-purple-500/50 transition-all">
               <div className="flex items-center gap-3 mb-4">
-                <BarChart3 className="w-8 h-8 text-purple-600" />
-                <h2 className="text-2xl font-bold text-gray-800">Learning Rates</h2>
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <ChartBarIcon className="w-8 h-8 text-purple-400" />
+                </div>
+                <h2 className="text-2xl font-semibold text-slate-100">Learning Rates</h2>
               </div>
               
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Positive Learning (α⁺)</span>
-                    <span className="font-bold text-green-600">{positiveLearningRate.toFixed(2)}</span>
+                    <span className="text-slate-400">Positive Learning (α⁺)</span>
+                    <span className="font-semibold text-slate-200">{positiveLearningRate.toFixed(2)}</span>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    How much you learn from positive outcomes
+                  <p className="text-xs text-slate-500">
+                    How much you are affected by good experiences
                   </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="w-full bg-slate-700 h-2 mt-2 rounded-full overflow-hidden">
                     <div 
-                      className="bg-green-500 h-2 rounded-full"
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300 shadow-md"
                       style={{ width: `${(positiveLearningRate / 0.9) * 100}%` }}
                     />
                   </div>
@@ -972,24 +326,24 @@ function OutcomeMode({ setSelectedMode }) {
 
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Negative Learning (α⁻)</span>
-                    <span className="font-bold text-red-600">{negativeLearningRate.toFixed(2)}</span>
+                    <span className="text-slate-400">Negative Learning (α⁻)</span>
+                    <span className="font-semibold text-slate-200">{negativeLearningRate.toFixed(2)}</span>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    How much you learn from negative outcomes
+                  <p className="text-xs text-slate-500">
+                    How much you are affected by bad experiences
                   </p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div className="w-full bg-slate-700 h-2 mt-2 rounded-full overflow-hidden">
                     <div 
-                      className="bg-red-500 h-2 rounded-full"
+                      className="bg-gradient-to-r from-red-500 to-rose-500 h-2 rounded-full transition-all duration-300 shadow-md"
                       style={{ width: `${(negativeLearningRate / 0.9) * 100}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="bg-indigo-50 rounded-lg p-3 mt-4">
-                  <p className="text-xs text-gray-700">
+                <div className="bg-slate-700/50 border border-slate-600 p-3 mt-4">
+                  <p className="text-xs text-slate-300 leading-relaxed">
                     <strong>Note:</strong> These rates are estimated from your choices. 
-                    Higher α⁻ means negative experiences have a stronger impact on your confidence.
+                    Higher α⁻ means negative experiences have a stronger impact on your confidence. Typically, people with depression have a higher α⁻ and a lower α⁺.
                   </p>
                 </div>
               </div>
@@ -998,21 +352,24 @@ function OutcomeMode({ setSelectedMode }) {
 
           {/* Confidence History Chart */}
           {valueHistory.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Confidence Over Time</h3>
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-6 mb-6 rounded-lg shadow-lg">
+              <h3 className="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-2">
+                <div className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+                Confidence Over Time
+              </h3>
               {valueHistory.length === 1 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-slate-400">
                   <p>Make choices to see your confidence change over time</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {/* Chart container with explicit height */}
                   <div 
-                    className="relative border-b-2 border-l-2 border-gray-300 bg-gray-50"
+                    className="relative border-b border-l border-slate-600 bg-slate-900"
                     style={{ height: '200px', paddingLeft: '32px' }}
                   >
                     {/* Y-axis labels */}
-                    <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 px-1" style={{ width: '32px' }}>
+                    <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-slate-400 px-1" style={{ width: '32px' }}>
                       <span>10</span>
                       <span>5</span>
                       <span>0</span>
@@ -1031,7 +388,7 @@ function OutcomeMode({ setSelectedMode }) {
                         return (
                           <div 
                             key={index} 
-                            className="flex flex-col items-center justify-end group relative"
+                            className="flex flex-col items-center justify-end group relative hover:opacity-80 transition-opacity"
                             style={{ 
                               height: '100%',
                               width: barWidth,
@@ -1039,7 +396,7 @@ function OutcomeMode({ setSelectedMode }) {
                             }}
                           >
                             <div 
-                              className="w-full bg-indigo-600 rounded-t transition-all hover:bg-indigo-700 cursor-pointer shadow-sm"
+                              className="w-full bg-gradient-to-t from-indigo-600 via-purple-500 to-pink-500 transition-all hover:from-indigo-500 hover:via-purple-400 hover:to-pink-400 cursor-pointer rounded-t shadow-md"
                               style={{ 
                                 height: `${barHeightPx}px`,
                                 minHeight: '8px'
@@ -1047,7 +404,7 @@ function OutcomeMode({ setSelectedMode }) {
                               title={`Step ${index + 1}: ${value.toFixed(1)}/10`}
                             />
                             {/* Tooltip on hover */}
-                            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-slate-700 border border-slate-600 text-slate-100 text-xs px-2 py-1 whitespace-nowrap z-10">
                               {value.toFixed(1)}/10
                             </div>
                           </div>
@@ -1059,7 +416,7 @@ function OutcomeMode({ setSelectedMode }) {
                   <div className="flex gap-1" style={{ paddingLeft: '32px' }}>
                     {valueHistory.map((value, index) => (
                       <div key={index} className="text-center" style={{ width: `${100 / valueHistory.length}%` }}>
-                        <span className="text-xs text-gray-500">{index + 1}</span>
+                        <span className="text-xs text-slate-400">{index + 1}</span>
                       </div>
                     ))}
                   </div>
@@ -1068,75 +425,147 @@ function OutcomeMode({ setSelectedMode }) {
             </div>
           )}
 
-          {/* Journey Summary */}
-          {choiceHistory.length > 0 && (
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Your Journey</h3>
-              <div className="space-y-3">
-                {choiceHistory.map((choice, index) => {
-                  // For the last choice, check if there's a terminal outcome
-                  // Terminal outcomes are added after the choice, so if outcomeHistory has one more entry
-                  // than choiceHistory, the last choice should use the last outcome
-                  const isLastChoice = index === choiceHistory.length - 1;
-                  const outcomeIndex = isLastChoice && outcomeHistory.length > choiceHistory.length 
-                    ? outcomeHistory.length - 1 
-                    : index;
-                  const outcome = outcomeHistory[outcomeIndex];
-                  
-                  return (
-                    <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-gray-800 font-medium">{choice.text}</p>
-                        {outcome && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {outcome.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-gray-500">
-                            Confidence: {choice.confidenceLevel}/10
-                          </span>
-                          {outcome && (
-                            <span className={`text-xs font-semibold ${
-                              outcome.reward > 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              Reward: {outcome.reward > 0 ? '+' : ''}{outcome.reward}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* Journey Summary - Table Format */}
+          {choiceHistory.length > 0 && (() => {
+            const agentStepsWithChoices = agentDecisions ? agentDecisions.path.filter(p => p.choice) : [];
+
+            return (
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-6 mb-6 rounded-lg shadow-lg">
+                <h3 className="text-xl font-semibold text-slate-100 mb-4 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
+                  Your Journey
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-slate-800/50 border-b border-slate-700">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-slate-200 border-r border-slate-700">
+                          Step
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-indigo-400 border-r border-slate-700">
+                          Your Decisions
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-amber-400">
+                          Agent's Decisions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {choiceHistory.map((choice, index) => {
+                        // For the last choice, check if there's a terminal outcome
+                        const isLastChoice = index === choiceHistory.length - 1;
+                        const outcomeIndex = isLastChoice && outcomeHistory.length > choiceHistory.length 
+                          ? outcomeHistory.length - 1 
+                          : index;
+                        const outcome = outcomeHistory[outcomeIndex];
+                        const agentStep = agentStepsWithChoices[index];
+                        
+                        return (
+                          <tr key={index} className="border-b border-slate-700 hover:bg-slate-800/30 transition-colors">
+                            <td className="px-4 py-4 text-sm font-medium text-slate-300 border-r border-slate-700">
+                              <div className="flex-shrink-0 w-8 h-8 bg-slate-600 text-slate-100 flex items-center justify-center font-semibold rounded">
+                                {index + 1}
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 border-r border-slate-700">
+                              <div className="p-3 bg-slate-700/50 border border-slate-600 rounded">
+                                <p className="text-slate-200 font-medium mb-1">{choice.text}</p>
+                                {outcome && (
+                                  <p className="text-sm text-slate-400 mt-1 mb-2">
+                                    {outcome.description}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs text-slate-500">
+                                    Confidence: {choice.confidenceLevel}/10
+                                  </span>
+                                  {outcome && (() => {
+                                    const displayReward = convertRewardToDisplayScale(outcome.reward);
+                                    const isPositive = displayReward > 0;
+                                    return (
+                                      <span className={`text-xs font-medium ${
+                                        isPositive ? 'text-green-400' : 'text-red-400'
+                                      }`}>
+                                        Reward: {isPositive ? '+' : ''}{displayReward.toFixed(1)}
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              {agentStep?.choice ? (
+                                <div className="p-3 bg-slate-700/50 border border-slate-600 rounded">
+                                  <p className="text-slate-200 font-medium mb-1">{agentStep.choice.text}</p>
+                                  {agentStep.outcome && (
+                                    <p className="text-sm text-slate-400 mt-1 mb-2">
+                                      {agentStep.outcome.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-slate-500">
+                                      Confidence: {agentStep.choice.confidenceLevel}/10
+                                    </span>
+                                    {agentStep.outcome && (() => {
+                                      // Convert agent outcome reward (1-8 scale) to display scale
+                                      const agentReward = agentStep.outcome.reward;
+                                      const displayReward = ((agentReward - 4.5) / 3.5) * 10;
+                                      const isPositive = displayReward > 0;
+                                      return (
+                                        <span className={`text-xs font-medium ${
+                                          isPositive ? 'text-green-400' : 'text-red-400'
+                                        }`}>
+                                          Reward: {isPositive ? '+' : ''}{displayReward.toFixed(1)}
+                                        </span>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-4 bg-slate-700/30 border border-slate-600 rounded text-center">
+                                  {index === 0 ? (
+                                    <>
+                                      <p className="text-slate-300 text-sm mb-3">
+                                        Play Agent Mode to compare decisions
+                                      </p>
+                                      <button
+                                        onClick={() => setSelectedMode('agent')}
+                                        className="bg-gradient-to-r from-amber-600 to-amber-700 text-white py-2 px-4 text-sm border border-amber-500 font-medium hover:from-amber-500 hover:to-amber-600 transition-all duration-200 shadow-md hover:shadow-amber-500/50 rounded-lg inline-flex items-center gap-2"
+                                      >
+                                        Start Agent Mode
+                                        <ArrowRightIcon className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <p className="text-slate-500 text-xs italic">-</p>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Actions */}
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap">
             <button
               onClick={choiceHistory.length === 0 ? () => setPhase('playing') : resetGame}
-              className="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+              className="flex-1 min-w-[200px] bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3 px-6 border border-indigo-500 font-medium hover:from-indigo-500 hover:to-indigo-600 transition-all duration-200 shadow-md hover:shadow-indigo-500/50 rounded-lg flex items-center justify-center gap-2"
             >
               {choiceHistory.length === 0 ? 'Start Adventure' : 'Play Again'} 
-              {choiceHistory.length === 0 ? <ArrowRight className="w-5 h-5" /> : <RefreshCw className="w-5 h-5" />}
+              {choiceHistory.length === 0 ? <ArrowRightIcon className="w-5 h-5" /> : <ArrowPathIcon className="w-5 h-5" />}
             </button>
-            {choiceHistory.length > 0 && (
-              <button
-                onClick={() => setSelectedMode(null)}
-                className="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
-              >
-                ← Back to Modes
-              </button>
-            )}
             <button
               onClick={() => setSelectedMode(null)}
-              className="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
+              className="bg-slate-800 text-slate-300 py-3 px-6 border border-slate-700 font-medium hover:bg-slate-700 transition rounded-lg"
             >
-              ← Back
+              ← Back to Modes
             </button>
           </div>
         </div>
@@ -1145,6 +574,66 @@ function OutcomeMode({ setSelectedMode }) {
   }
 
   if (phase === 'playing') {
+    // If we're showing an outcome, display it separately
+    if (showingOutcome && pendingOutcome) {
+      return (
+        <div className="min-h-screen bg-slate-900 p-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 rounded-lg shadow-xl">
+              {/* Progress indicator */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-slate-400">Current Confidence</span>
+                  <span className="font-semibold text-slate-200">{currentValue.toFixed(1)}/10</span>
+                </div>
+              <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${(currentValue / 10) * 100}%` }}
+                />
+              </div>
+              </div>
+
+              {/* Outcome display */}
+              {(() => {
+                const displayReward = convertRewardToDisplayScale(pendingOutcome.reward);
+                const isPositive = displayReward > 0;
+                
+                return (
+                  <div className={`p-6 mb-6 border-l-4 rounded-lg ${
+                    isPositive
+                      ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-green-500' 
+                      : 'bg-gradient-to-br from-red-900/30 to-rose-900/20 border-red-500'
+                  }`}>
+                    <h3 className="text-xl font-semibold text-slate-100 mb-3">Result</h3>
+                    <p className="text-lg text-slate-200 leading-relaxed mb-4">
+                      {pendingOutcome.description}
+                    </p>
+                    <p className={`text-lg font-medium ${
+                      isPositive
+                        ? 'text-green-400' 
+                        : 'text-red-400'
+                    }`}>
+                      Reward: {isPositive ? '+' : ''}{displayReward.toFixed(1)}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Continue button */}
+              <button
+                onClick={handleOutcomeAcknowledged}
+                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3 px-6 border border-indigo-500 font-medium hover:from-indigo-500 hover:to-indigo-600 transition-all duration-200 shadow-md hover:shadow-indigo-500/50 rounded-lg flex items-center justify-center gap-2"
+              >
+                Continue <ArrowRightIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Otherwise, show the current situation
     const currentNode = storyNodes[currentNodeId];
     
     if (!currentNode) {
@@ -1152,59 +641,60 @@ function OutcomeMode({ setSelectedMode }) {
       return null;
     }
 
+    // If current node is terminal, show it and provide a button to finish
+    // This ensures the user sees all 7 steps before the game ends
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-8">
+      <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-slate-800 border border-slate-700 p-8">
             {/* Progress indicator */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600">Current Confidence</span>
-                <span className="font-bold text-indigo-600">{currentValue.toFixed(1)}/10</span>
+                <span className="text-sm text-slate-400">Current Confidence</span>
+                <span className="font-semibold text-slate-200">{currentValue.toFixed(1)}/10</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
+              <div className="w-full bg-slate-700 h-3 rounded-full overflow-hidden">
                 <div 
-                  className="bg-indigo-600 h-3 rounded-full transition-all"
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-300"
                   style={{ width: `${(currentValue / 10) * 100}%` }}
                 />
               </div>
             </div>
 
             {/* Situation */}
-            <div className="bg-indigo-50 rounded-lg p-6 mb-6">
-              <p className="text-lg text-gray-800">{currentNode.situation}</p>
+            <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 border border-slate-600 p-6 mb-6 rounded-lg">
+              <p className="text-lg text-slate-200 leading-relaxed">{currentNode.situation}</p>
             </div>
 
-            {/* Choices */}
-            <div className="space-y-3 mb-6">
-              <p className="font-semibold text-gray-700 mb-3">What do you do?</p>
-              {currentNode.choices.map((choice) => (
-                <button
-                  key={choice.id}
-                  onClick={() => handleChoice(choice)}
-                  className="w-full text-left p-4 bg-white border-2 border-gray-200 rounded-lg hover:border-indigo-600 hover:bg-indigo-50 transition"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-indigo-600">{choice.id.toUpperCase()}.</span>
-                    <span className="text-sm text-gray-500">Confidence: {choice.confidenceLevel}/10</span>
-                  </div>
-                  <p className="mt-1 text-gray-800">{choice.text}</p>
-                </button>
-              ))}
-            </div>
-
-            {/* Show outcome if available */}
-            {currentNode.outcome && (
-              <div className={`rounded-lg p-4 mb-4 ${
-                currentNode.outcome.reward > 0 ? 'bg-green-50 border-l-4 border-green-600' : 'bg-red-50 border-l-4 border-red-600'
-              }`}>
-                <p className="text-gray-800">{currentNode.outcome.description}</p>
-                <p className={`text-sm font-semibold mt-2 ${
-                  currentNode.outcome.reward > 0 ? 'text-green-700' : 'text-red-700'
-                }`}>
-                  Reward: {currentNode.outcome.reward > 0 ? '+' : ''}{currentNode.outcome.reward}
-                </p>
+            {/* Choices - only show if not terminal */}
+            {!currentNode.isTerminal && currentNode.choices && (
+              <div className="space-y-3 mb-6">
+                <p className="font-medium text-slate-300 mb-3">What do you do?</p>
+                {currentNode.choices.map((choice) => (
+                  <button
+                    key={choice.id}
+                    onClick={() => handleChoice(choice)}
+                    className="w-full text-left p-4 bg-slate-800 border border-slate-700 hover:border-slate-600 hover:bg-slate-700/50 transition rounded-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-slate-300">{choice.id.toUpperCase()}.</span>
+                      <span className="text-sm text-slate-500">Confidence: {choice.confidenceLevel}/10</span>
+                    </div>
+                    <p className="mt-1 text-slate-200">{choice.text}</p>
+                  </button>
+                ))}
               </div>
+            )}
+
+            {/* Show finish button if terminal */}
+            {currentNode.isTerminal && (
+              <button
+                onClick={() => setPhase('finished')}
+                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3 px-6 border border-indigo-500 font-medium hover:from-indigo-500 hover:to-indigo-600 transition-all duration-200 shadow-md hover:shadow-indigo-500/50 rounded-lg flex items-center justify-center gap-2"
+              >
+                View Final Results <ArrowRightIcon className="w-5 h-5" />
+              </button>
             )}
           </div>
         </div>
@@ -1214,86 +704,239 @@ function OutcomeMode({ setSelectedMode }) {
 
   if (phase === 'finished') {
     const finalNode = storyNodes[currentNodeId];
-    const estimated = estimateLearningRates();
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-8">
+      <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Your Journey Complete</h2>
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-indigo-500/30 p-8 rounded-lg shadow-xl">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-2xl border border-indigo-500/30">
+                  <HeartIcon className="w-16 h-16 text-indigo-400" />
+                </div>
+              </div>
+              <h2 className="text-4xl font-semibold text-slate-100 mb-3">Your Journey Complete</h2>
+              <p className="text-lg text-slate-300">
+                Thank you for exploring how mental health affects our experiences
+              </p>
+            </div>
             
-            {finalNode?.outcome && (
-              <div className={`rounded-lg p-6 mb-6 ${
-                finalNode.outcome.reward > 0 ? 'bg-green-50' : 'bg-red-50'
-              }`}>
-                <p className="text-lg text-gray-800 mb-2">{finalNode.situation}</p>
-                <p className="text-gray-700">{finalNode.outcome.description}</p>
-              </div>
-            )}
-
-            {/* Final Stats */}
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-indigo-50 rounded-lg p-6">
-                <h3 className="font-bold text-gray-800 mb-4">Final Confidence</h3>
-                <div className="text-4xl font-bold text-indigo-600 mb-2">
-                  {currentValue.toFixed(1)}/10
+            {/* Final Outcome */}
+            {finalNode?.outcome && (() => {
+              const displayReward = convertRewardToDisplayScale(finalNode.outcome.reward);
+              const isPositive = displayReward > 0;
+              return (
+                <div className={`p-6 mb-8 border-l-4 rounded-lg ${
+                  isPositive
+                    ? 'bg-gradient-to-br from-green-900/30 to-emerald-900/20 border-green-500' 
+                    : 'bg-gradient-to-br from-red-900/30 to-rose-900/20 border-red-500'
+                }`}>
+                  <p className="text-lg text-slate-200 mb-2 font-medium">{finalNode.situation}</p>
+                  <p className="text-slate-300 mb-2">{finalNode.outcome.description}</p>
+                  <p className={`text-sm font-medium ${
+                    isPositive ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    Reward: {isPositive ? '+' : ''}{displayReward.toFixed(1)}
+                  </p>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div 
-                    className="bg-indigo-600 h-4 rounded-full"
-                    style={{ width: `${(currentValue / 10) * 100}%` }}
-                  />
-                </div>
-              </div>
+              );
+            })()}
 
-              <div className="bg-purple-50 rounded-lg p-6">
-                <h3 className="font-bold text-gray-800 mb-4">Learning Rates</h3>
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600">Positive (α⁺)</span>
-                      <span className="font-bold text-green-600">{estimated.positiveLearningRate.toFixed(2)}</span>
+            {/* Final Confidence - Simple Display */}
+            <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 border border-slate-600 p-6 mb-8 rounded-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                  <CpuChipIcon className="w-6 h-6 text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-slate-100">Your Final Confidence</h3>
+              </div>
+              <div className="text-5xl font-bold text-indigo-400 mb-3 text-center">
+                {currentValue.toFixed(1)}/10
+              </div>
+              <div className="w-full bg-slate-700 h-4 rounded-full overflow-hidden">
+                <div 
+                  className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-4 rounded-full transition-all duration-500"
+                  style={{ width: `${(currentValue / 10) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Mental Health Resources */}
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-teal-500/10 rounded-lg">
+                  <LightBulbIcon className="w-6 h-6 text-teal-400" />
+                </div>
+                <h3 className="text-2xl font-semibold text-slate-100">Helpful Resources</h3>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Crisis Resources */}
+                <div className="bg-gradient-to-br from-red-900/20 to-rose-900/20 border border-red-500/30 p-6 rounded-lg hover:border-red-500/50 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-red-500/10 rounded-lg">
+                      <PhoneIcon className="w-6 h-6 text-red-400" />
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${(estimated.positiveLearningRate / 0.9) * 100}%` }}
-                      />
-                    </div>
+                    <h4 className="font-semibold text-slate-100">Crisis Support</h4>
                   </div>
-                  <div>
-                    <div className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600">Negative (α⁻)</span>
-                      <span className="font-bold text-red-600">{estimated.negativeLearningRate.toFixed(2)}</span>
+                  <p className="text-sm text-slate-300 mb-4">
+                    If you're in crisis or having thoughts of self-harm, help is available 24/7.
+                  </p>
+                  <div className="space-y-2">
+                    <a 
+                      href="https://988lifeline.org" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors group"
+                    >
+                      <span className="font-medium">988 Suicide & Crisis Lifeline</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                    <p className="text-xs text-slate-400">Call or text 988 (US)</p>
+                  </div>
+                </div>
+
+                {/* Therapy & Treatment */}
+                <div className="bg-gradient-to-br from-blue-900/20 to-cyan-900/20 border border-blue-500/30 p-6 rounded-lg hover:border-blue-500/50 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <AcademicCapIcon className="w-6 h-6 text-blue-400" />
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-red-500 h-2 rounded-full"
-                        style={{ width: `${(estimated.negativeLearningRate / 0.9) * 100}%` }}
-                      />
+                    <h4 className="font-semibold text-slate-100">Find Treatment</h4>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-4">
+                    Professional help can make a real difference. Therapy and medication can help rebalance learning rates.
+                  </p>
+                  <div className="space-y-2">
+                    <a 
+                      href="https://www.psychologytoday.com/us/therapists" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors group"
+                    >
+                      <span className="font-medium">Psychology Today Therapist Directory</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                    <a 
+                      href="https://www.nami.org/help" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors group"
+                    >
+                      <span className="font-medium">NAMI HelpLine</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Education & Understanding */}
+                <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/30 p-6 rounded-lg hover:border-purple-500/50 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-purple-500/10 rounded-lg">
+                      <BookOpenIcon className="w-6 h-6 text-purple-400" />
                     </div>
+                    <h4 className="font-semibold text-slate-100">Learn More</h4>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-4">
+                    Understanding depression is the first step toward healing.
+                  </p>
+                  <div className="space-y-2">
+                    <a 
+                      href="https://www.nimh.nih.gov/health/topics/depression" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors group"
+                    >
+                      <span className="font-medium">NIMH: Depression Information</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                    <a 
+                      href="https://www.nami.org/About-Mental-Illness/Mental-Health-Conditions/Depression" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors group"
+                    >
+                      <span className="font-medium">NAMI: Depression Resources</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Self-Help & Support */}
+                <div className="bg-gradient-to-br from-teal-900/20 to-cyan-900/20 border border-teal-500/30 p-6 rounded-lg hover:border-teal-500/50 transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-teal-500/10 rounded-lg">
+                      <HeartIcon className="w-6 h-6 text-teal-400" />
+                    </div>
+                    <h4 className="font-semibold text-slate-100">Support & Community</h4>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-4">
+                    You're not alone. Connect with others who understand what you're going through.
+                  </p>
+                  <div className="space-y-2">
+                    <a 
+                      href="https://www.nami.org/Support-Education/Support-Groups" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-teal-400 hover:text-teal-300 transition-colors group"
+                    >
+                      <span className="font-medium">NAMI Support Groups</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
+                    <a 
+                      href="https://www.depression.org.nz/getting-through/self-help-tools/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-teal-400 hover:text-teal-300 transition-colors group"
+                    >
+                      <span className="font-medium">Self-Help Tools & Strategies</span>
+                      <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </a>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Important Message */}
+            <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/20 border-l-4 border-indigo-500 p-6 mb-8 rounded-lg">
+              <div className="flex items-start gap-3">
+                <HeartIcon className="w-6 h-6 text-indigo-400 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold text-slate-100 mb-2">Remember</h4>
+                  <p className="text-slate-300 leading-relaxed">
+                    Depression isn't a character flaw or something you can "think your way out of." 
+                    As this simulation showed, it's a real change in how the brain processes experiences. 
+                    Treatment works by helping rebalance these learning mechanisms. Recovery is possible, 
+                    and seeking help is a sign of strength.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Actions */}
-            <div className="flex gap-4">
-              <button
-                onClick={resetGame}
-                className="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-5 h-5" /> Play Again
-              </button>
+            <div className="flex flex-wrap gap-4">
               <button
                 onClick={() => setPhase('landing')}
-                className="bg-gray-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-600 transition"
+                className="flex-1 min-w-[200px] bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-3 px-6 border border-indigo-500 font-medium hover:from-indigo-500 hover:to-indigo-600 transition-all duration-200 shadow-md hover:shadow-indigo-500/50 rounded-lg flex items-center justify-center gap-2"
               >
-                View Stats
+                <ChartBarIcon className="w-5 h-5" /> View Detailed Stats
+              </button>
+              <button
+                onClick={() => setSelectedMode('agent')}
+                className="flex-1 min-w-[200px] bg-gradient-to-r from-amber-600 to-amber-700 text-white py-3 px-6 border border-amber-500 font-medium hover:from-amber-500 hover:to-amber-600 transition-all duration-200 shadow-md hover:shadow-amber-500/50 rounded-lg flex items-center justify-center gap-2"
+              >
+                Now Compare with an Agent
+              </button>
+              <button
+                onClick={resetGame}
+                className="flex-1 min-w-[200px] bg-gradient-to-r from-slate-700 to-slate-800 text-white py-3 px-6 border border-slate-600 font-medium hover:from-slate-600 hover:to-slate-700 transition-all duration-200 rounded-lg flex items-center justify-center gap-2"
+              >
+                <ArrowPathIcon className="w-5 h-5" /> Play Again
               </button>
               <button
                 onClick={() => setSelectedMode(null)}
-                className="bg-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-400 transition"
+                className="flex-1 min-w-[200px] bg-slate-800 text-slate-300 py-3 px-6 border border-slate-700 font-medium hover:bg-slate-700 transition rounded-lg"
               >
                 ← Back to Modes
               </button>

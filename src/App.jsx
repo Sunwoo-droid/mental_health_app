@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 // Import the separated components
-import { SimpleMode, LearningMode, ModeSelector, OutcomeMode, DepressionFilter } from './components';
+import { SimpleMode, AgentMode, ModeSelector, OutcomeMode, DepressionFilter } from './components';
 
 // ============================================
 // MAIN APP: MODE SELECTOR
@@ -20,7 +20,7 @@ function MentalHealthApp() {
         {/* Optional fixed button to go back to selection */}
         <button
           onClick={() => setSelectedMode(null)}
-          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
+          className="fixed top-4 left-4 bg-slate-800 border border-slate-700 px-4 py-2 rounded transition text-slate-200 font-medium z-50 hover:bg-slate-700"
         >
           ← Back to Mode Selection
         </button>
@@ -29,17 +29,17 @@ function MentalHealthApp() {
     );
   }
 
-  // 3. Render LearningMode if 'Learning' is selected
-  if (selectedMode === 'Learning') {
+  // 3. Render AgentMode if 'agent' is selected
+  if (selectedMode === 'agent') {
     return (
       <>
         <button
           onClick={() => setSelectedMode(null)}
-          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
+          className="fixed top-4 left-4 bg-slate-800 border border-slate-700 px-4 py-2 rounded transition text-slate-200 font-medium z-50 hover:bg-slate-700"
         >
           ← Back to Mode Selection
         </button>
-        <LearningMode setSelectedMode={setSelectedMode} />
+        <AgentMode setSelectedMode={setSelectedMode} />
       </>
     );
   }
@@ -50,7 +50,7 @@ function MentalHealthApp() {
       <>
         <button
           onClick={() => setSelectedMode(null)}
-          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
+          className="fixed top-4 left-4 bg-slate-800 border border-slate-700 px-4 py-2 rounded transition text-slate-200 font-medium z-50 hover:bg-slate-700"
         >
           ← Back to Mode Selection
         </button>
@@ -65,7 +65,7 @@ function MentalHealthApp() {
       <>
         <button
           onClick={() => setSelectedMode(null)}
-          className="fixed top-4 left-4 bg-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition text-gray-700 font-semibold z-50"
+          className="fixed top-4 left-4 bg-slate-800 border border-slate-700 px-4 py-2 rounded transition text-slate-200 font-medium z-50 hover:bg-slate-700"
         >
           ← Back to Mode Selection
         </button>
