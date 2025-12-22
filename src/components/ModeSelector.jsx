@@ -28,10 +28,14 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                 console.error('Error parsing agent decisions:', e);
             }
         }
-    }, []);
 
-    // Don't automatically show comparison - let user choose to view it
-    // The comparison will only show when user clicks "View Decision Comparison" button
+        // Check if we should show comparison (set by AgentMode or other components)
+        const shouldShowComparison = sessionStorage.getItem('showComparison');
+        if (shouldShowComparison === 'true') {
+            setShowComparison(true);
+            sessionStorage.removeItem('showComparison'); // Clear the flag after using it
+        }
+    }, []);
 
     // Clear decisions (for testing/reset)
     const clearDecisions = () => {
@@ -168,6 +172,74 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                                             );
                                         }
 
+                                        // User decisions exist but no agent decisions - show user decisions with button to run agent
+                                        if (userDecisions && !agentDecisions) {
+                                            return userDecisions.choices.map((userChoice, i) => {
+                                                // Get user outcome
+                                                const isLastChoice = i === userDecisions.choices.length - 1;
+                                                const outcomeIndex = isLastChoice && userDecisions.outcomes.length > userDecisions.choices.length 
+                                                    ? userDecisions.outcomes.length - 1 
+                                                    : i;
+                                                const userOutcome = userDecisions.outcomes[outcomeIndex];
+                                                
+                                                return (
+                                                    <tr key={i} className="border-b border-slate-700 hover:bg-slate-800/30 transition-colors">
+                                                        <td className="px-4 py-4 text-sm font-medium text-slate-300 border-r border-slate-700">
+                                                            <div className="flex-shrink-0 w-8 h-8 bg-slate-600 text-slate-100 flex items-center justify-center font-semibold rounded-lg">
+                                                                {i + 1}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4 border-r border-slate-700">
+                                                            <div className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg">
+                                                                <p className="text-slate-200 font-medium mb-1">{userChoice.text}</p>
+                                                                {userOutcome && (
+                                                                    <p className="text-sm text-slate-400 mt-1 mb-2">
+                                                                        {userOutcome.description}
+                                                                    </p>
+                                                                )}
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="text-xs text-slate-500">
+                                                                        Confidence: {userChoice.confidenceLevel}/10
+                                                                    </span>
+                                                                    {userOutcome && (() => {
+                                                                        const displayReward = convertRewardToDisplayScale(userOutcome.reward);
+                                                                        const isPositive = displayReward > 0;
+                                                                        return (
+                                                                            <span className={`text-xs font-medium ${
+                                                                                isPositive ? 'text-green-400' : 'text-red-400'
+                                                                            }`}>
+                                                                                Reward: {isPositive ? '+' : ''}{displayReward.toFixed(1)}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <div className="p-4 bg-slate-700/30 border border-slate-600 rounded-lg text-center">
+                                                                {i === 0 ? (
+                                                                    <>
+                                                                        <p className="text-slate-300 text-sm mb-3">
+                                                                            Play Agent Mode to compare decisions
+                                                                        </p>
+                                                                        <button
+                                                                            onClick={() => setSelectedMode('agent')}
+                                                                            className="bg-gradient-to-r from-amber-600 to-amber-700 text-white py-2 px-4 text-sm border border-amber-500 font-medium hover:from-amber-500 hover:to-amber-600 transition-all duration-200 shadow-md hover:shadow-amber-500/50 rounded-lg inline-flex items-center gap-2"
+                                                                        >
+                                                                            Start Agent Mode
+                                                                            <ArrowRightIcon className="w-4 h-4" />
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <p className="text-slate-500 text-xs italic">-</p>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
+                                        }
+
                                         // Both user and agent decisions exist - show comparison
                                         if (userDecisions && agentDecisions) {
                                             // Get agent steps with choices
@@ -194,7 +266,7 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                                                 rows.push(
                                                     <tr key={i} className="border-b border-slate-700 hover:bg-slate-800/30 transition-colors">
                                                         <td className="px-4 py-4 text-sm font-medium text-slate-300 border-r border-slate-700">
-                                                            <div className="flex-shrink-0 w-8 h-8 bg-slate-600 text-slate-100 flex items-center justify-center font-semibold rounded">
+                                                            <div className="flex-shrink-0 w-8 h-8 bg-slate-600 text-slate-100 flex items-center justify-center font-semibold rounded-lg">
                                                                 {i + 1}
                                                             </div>
                                                         </td>
@@ -286,7 +358,10 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                     {/* Actions */}
                     <div className="flex flex-wrap gap-4 justify-center">
                         <button
-                            onClick={() => setShowComparison(false)}
+                            onClick={() => {
+                                setShowComparison(false);
+                                sessionStorage.removeItem('showComparison'); // Clear any lingering flag
+                            }}
                             className="bg-gradient-to-r from-slate-700 to-slate-800 text-white py-3 px-6 border border-slate-600 font-medium hover:from-slate-600 hover:to-slate-700 transition-all duration-200 rounded-lg"
                         >
                             Back to Mode Selection
@@ -428,7 +503,10 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                 {(userDecisions && agentDecisions) || (agentDecisions && !userDecisions) ? (
                     <div className="mt-8 text-center">
                         <button
-                            onClick={() => setShowComparison(true)}
+                            onClick={() => {
+                                setShowComparison(true);
+                                sessionStorage.setItem('showComparison', 'true'); // Set flag in case of refresh
+                            }}
                             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-8 border border-indigo-500 font-medium hover:from-indigo-500 hover:to-purple-500 transition-all duration-200 shadow-md hover:shadow-indigo-500/50 rounded-lg inline-flex items-center gap-2"
                         >
                             View Decision Comparison

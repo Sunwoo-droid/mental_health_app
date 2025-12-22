@@ -752,7 +752,10 @@ function AgentMode({ setSelectedMode }) {
             {/* Actions */}
             <div className="flex flex-wrap gap-4">
               <button
-                onClick={() => setSelectedMode(null)}
+                onClick={() => {
+                  sessionStorage.setItem('showComparison', 'true');
+                  setSelectedMode(null);
+                }}
                 className="flex-1 min-w-[200px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-6 border border-indigo-500 font-medium hover:from-indigo-500 hover:to-purple-500 transition-all duration-200 shadow-md hover:shadow-indigo-500/50 rounded-lg flex items-center justify-center gap-2"
               >
                 View Decision Comparison

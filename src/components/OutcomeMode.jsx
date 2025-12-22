@@ -561,6 +561,18 @@ function OutcomeMode({ setSelectedMode }) {
               {choiceHistory.length === 0 ? 'Start Adventure' : 'Play Again'} 
               {choiceHistory.length === 0 ? <ArrowRightIcon className="w-5 h-5" /> : <ArrowPathIcon className="w-5 h-5" />}
             </button>
+            {choiceHistory.length > 0 && (
+              <button
+                onClick={() => {
+                  sessionStorage.setItem('showComparison', 'true');
+                  setSelectedMode(null);
+                }}
+                className="flex-1 min-w-[200px] bg-gradient-to-r from-amber-600 to-amber-700 text-white py-3 px-6 border border-amber-500 font-medium hover:from-amber-500 hover:to-amber-600 transition-all duration-200 shadow-md hover:shadow-amber-500/50 rounded-lg flex items-center justify-center gap-2"
+              >
+                Compare with Agent
+                <ArrowRightIcon className="w-5 h-5" />
+              </button>
+            )}
             <button
               onClick={() => setSelectedMode(null)}
               className="bg-slate-800 text-slate-300 py-3 px-6 border border-slate-700 font-medium hover:bg-slate-700 transition rounded-lg"
@@ -923,10 +935,14 @@ function OutcomeMode({ setSelectedMode }) {
                 <ChartBarIcon className="w-5 h-5" /> View Detailed Stats
               </button>
               <button
-                onClick={() => setSelectedMode('agent')}
+                onClick={() => {
+                  sessionStorage.setItem('showComparison', 'true');
+                  setSelectedMode(null);
+                }}
                 className="flex-1 min-w-[200px] bg-gradient-to-r from-amber-600 to-amber-700 text-white py-3 px-6 border border-amber-500 font-medium hover:from-amber-500 hover:to-amber-600 transition-all duration-200 shadow-md hover:shadow-amber-500/50 rounded-lg flex items-center justify-center gap-2"
               >
-                Now Compare with an Agent
+                Compare with Agent
+                <ArrowRightIcon className="w-5 h-5" />
               </button>
               <button
                 onClick={resetGame}
