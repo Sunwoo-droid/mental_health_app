@@ -72,15 +72,6 @@ function OutcomeMode({ setSelectedMode }) {
   // TD LEARNING FUNCTIONS
   // ============================================
 
-  const updateValueWithTD = (reward, currentVal) => {
-    return tdUpdate({
-      currentValue: currentVal,
-      reward,
-      positiveLearningRate,
-      negativeLearningRate,
-    }).nextValue;
-  };
-
   const estimateLearningRates = () => {
     return estimateLearningRatesFromChoices({
       choices: choiceHistory,
