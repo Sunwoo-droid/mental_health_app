@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { CpuChipIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ChartBarIcon, ArrowRightIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { estimateLearningRatesFromChoices, tdUpdate } from '../utils/simulationMath';
+import SafetyNotice from './SafetyNotice';
+import SupportResources from './SupportResources';
 
 // ============================================
 // SIMPLE MODE COMPONENT
@@ -9,6 +12,14 @@ import { CpuChipIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, ChartBarIcon, 
 // Pass 2: Agent uses TD equations with mental filter parameters → Compare
 
 function SimpleMode({ setSelectedMode }) {
+  const SIMPLE_MODE_REWARD_CONFIG = {
+    inputCenter: 0,
+    inputHalfRange: 1,
+    displayMultiplier: 1,
+    normalizedBase: 5,
+    normalizedMultiplier: 0.4,
+  };
+
   // ============================================
   // STATE MANAGEMENT
   // ============================================
@@ -276,52 +287,15 @@ function SimpleMode({ setSelectedMode }) {
 
   const estimateParameters = () => {
     // We'll look at how confidence changed after positive vs negative outcomes
-    
-    let positiveUpdates = [];
-    let negativeUpdates = [];
-    
+    const outcomes = [];
     let scenarioIdx = 0;
     let stepIdx = 0;
     
-    // Go through all user choices and calculate implied learning
+    // Align each user choice with the encountered outcome.
     for (let i = 0; i < userChoices.length; i++) {
-      const choice = userChoices[i];
       const scenario = scenarios[scenarioIdx];
       const step = scenario.steps[stepIdx];
-      
-      // Current confidence = confidence level of chosen option
-      const currentConfidence = choice.confidenceLevel;
-      
-      // Get outcome
-      const outcome = step.outcome;
-      
-      // Look at NEXT choice (if exists) to see how confidence changed
-      if (i < userChoices.length - 1) {
-        const nextChoice = userChoices[i + 1];
-        const nextConfidence = nextChoice.confidenceLevel;
-        
-        // Calculate confidence change
-        const confidenceChange = nextConfidence - currentConfidence;
-        
-        // Categorize by outcome type
-        if (outcome.reward > 0) {
-          // Positive outcome: Did confidence increase?
-          positiveUpdates.push({
-            reward: outcome.reward,
-            change: confidenceChange,
-            // Implied learning rate: change / reward
-            impliedAlpha: Math.max(0, confidenceChange / outcome.reward)
-          });
-        } else if (outcome.reward < 0) {
-          // Negative outcome: Did confidence decrease?
-          negativeUpdates.push({
-            reward: outcome.reward,
-            change: confidenceChange,
-            // For negative, we want: how much did it drop relative to severity?
-            impliedAlpha: Math.max(0, -confidenceChange / Math.abs(outcome.reward))
-          });
-        }
-      }
+      outcomes.push(step.outcome);
       
       // Move to next step
       stepIdx++;
@@ -331,23 +305,11 @@ function SimpleMode({ setSelectedMode }) {
       }
     }
     
-    // Calculate average learning rates
-    const avgPositiveAlpha = positiveUpdates.length > 0
-      ? positiveUpdates.reduce((sum, u) => sum + u.impliedAlpha, 0) / positiveUpdates.length
-      : 0.5;
-      
-    const avgNegativeAlpha = negativeUpdates.length > 0
-      ? negativeUpdates.reduce((sum, u) => sum + u.impliedAlpha, 0) / negativeUpdates.length
-      : 0.5;
-    
-    // Clamp to reasonable range and adjust
-    const finalPositiveAlpha = Math.min(0.9, Math.max(0.1, avgPositiveAlpha * 0.8));
-    const finalNegativeAlpha = Math.min(0.9, Math.max(0.1, avgNegativeAlpha * 0.8));
-    
-    return {
-      positiveLearningRate: parseFloat(finalPositiveAlpha.toFixed(2)),
-      negativeLearningRate: parseFloat(finalNegativeAlpha.toFixed(2))
-    };
+    return estimateLearningRatesFromChoices({
+      choices: userChoices,
+      outcomes,
+      rewardTransform: (reward) => reward,
+    });
   };
 
   // ============================================
@@ -446,26 +408,15 @@ function SimpleMode({ setSelectedMode }) {
         // TD UPDATE: V(t+1) = V(t) + α[r - V(t)]
         // But we need to interpret reward relative to expectations
         
-        // Expected reward based on current confidence        
-        // Actual reward (normalized to 0-10 scale)
-        // Positive outcomes (+7) should map to ~8-9
-        // Negative outcomes (-4) should map to ~2-3
-        const normalizedReward = 5 + (outcome.reward * 0.4); // Scale to 0-10
-        
-        const rpe = normalizedReward - currentValue;
-        
-        // Select learning rate based on outcome sign
-        const alpha = rpe > 0 
-          ? agentParameters.positiveLearningRate 
-          : agentParameters.negativeLearningRate;
-        
-        // Apply TD equation
-        const newValue = currentValue + (alpha * rpe);
-        
-        // Clamp to 0-10 range (but not too aggressively)
-        currentValue = Math.max(0, Math.min(10, newValue));
-        
-        agentPath.rpeHistory.push({ rpe, alpha, reward: outcome.reward });
+        const tdResult = tdUpdate({
+          currentValue,
+          reward: outcome.reward,
+          positiveLearningRate: agentParameters.positiveLearningRate,
+          negativeLearningRate: agentParameters.negativeLearningRate,
+          config: SIMPLE_MODE_REWARD_CONFIG,
+        });
+        currentValue = tdResult.nextValue;
+        agentPath.rpeHistory.push({ rpe: tdResult.rpe, alpha: tdResult.alpha, reward: outcome.reward });
         
       }
     }
@@ -498,6 +449,7 @@ function SimpleMode({ setSelectedMode }) {
               In this mode, you'll experience various social situations throughout a school week. 
               Make choices that feel natural to you.
             </p>
+            <SafetyNotice className="mb-6" />
             
             <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 border-l-4 border-slate-600 p-4 mb-6 rounded-lg">
               <p className="font-medium text-teal-300 mb-2">How it works:</p>
@@ -522,6 +474,7 @@ function SimpleMode({ setSelectedMode }) {
             >
               Begin Your Week <ArrowRightIcon className="w-5 h-5" />
             </button>
+            <SupportResources className="mt-6" />
           </div>
         </div>
       </div>
@@ -1227,6 +1180,7 @@ function SimpleMode({ setSelectedMode }) {
                 Try Different Parameters
             </button>
             </div>
+            <SafetyNotice className="mt-6" />
           </div>
         </div>
       </div>

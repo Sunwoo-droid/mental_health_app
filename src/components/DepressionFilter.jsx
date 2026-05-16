@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { LockClosedIcon, ArrowTrendingDownIcon, ArrowRightIcon, ArrowPathIcon, ExclamationCircleIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { storyNodes } from './StoryNodes';
+import { tdUpdate } from '../utils/simulationMath';
+import SafetyNotice from './SafetyNotice';
+import SupportResources from './SupportResources';
 
 // ============================================
 // DEPRESSION FILTER MODE
@@ -18,6 +21,8 @@ function DepressionFilter({ setSelectedMode }) {
   const [choiceHistory, setChoiceHistory] = useState([]);
   const [outcomeHistory, setOutcomeHistory] = useState([]);
   const [currentNodeId, setCurrentNodeId] = useState('start');
+  const [blockedChoiceCount, setBlockedChoiceCount] = useState(0);
+  const [decisionStepCount, setDecisionStepCount] = useState(0);
   
   // Fixed depressed learning rates (simulating depression)
   const positiveLearningRate = 0.1;  // Low - positive experiences barely register
@@ -29,21 +34,12 @@ function DepressionFilter({ setSelectedMode }) {
   
   // Note: storyNodes is imported from StoryNodes.jsx
   const updateValueWithTD = (reward, currentVal) => {
-    // Convert reward from StoryNodes scale (typically 1-8) to normalized scale
-    // StoryNodes rewards are in a roughly -5 to 8 range, normalize to 0-10 scale
-    const normalizedReward = 5 + (reward * 0.4);
-    
-    // Calculate Reward Prediction Error
-    const rpe = normalizedReward - currentVal;
-    
-    // Select learning rate based on outcome sign (using depressed rates)
-    const alpha = rpe > 0 ? positiveLearningRate : negativeLearningRate;
-    
-    // TD Update: V(t+1) = V(t) + α[r - V(t)]
-    const newValue = currentVal + (alpha * rpe);
-    
-    // Clamp to 0-10 range
-    return Math.max(0, Math.min(10, newValue));
+    return tdUpdate({
+      currentValue: currentVal,
+      reward,
+      positiveLearningRate,
+      negativeLearningRate,
+    }).nextValue;
   };
 
   // ============================================
@@ -51,6 +47,14 @@ function DepressionFilter({ setSelectedMode }) {
   // ============================================
 
   const handleChoice = (choice) => {
+    const currentNode = storyNodes[currentNodeId];
+    if (currentNode?.choices?.length) {
+      const blockedAtThisStep = currentNode.choices.filter((candidateChoice) =>
+        isChoiceBlocked(candidateChoice, currentNode.choices, currentValue)
+      ).length;
+      setBlockedChoiceCount((previousCount) => previousCount + blockedAtThisStep);
+      setDecisionStepCount((previousSteps) => previousSteps + 1);
+    }
     
     // Record choice
     const updatedChoiceHistory = [...choiceHistory, choice];
@@ -96,6 +100,8 @@ function DepressionFilter({ setSelectedMode }) {
     setChoiceHistory([]);
     setOutcomeHistory([]);
     setCurrentNodeId('start');
+    setBlockedChoiceCount(0);
+    setDecisionStepCount(0);
   };
 
   // Check if a choice is blocked (requires confidence higher than current)
@@ -132,26 +138,32 @@ function DepressionFilter({ setSelectedMode }) {
               Depression Filter Mode
             </h1>
             <p className="text-lg text-slate-300 text-center mb-8">
-              This simulation helps you understand the concept of a "mental filter" - a way some people experiencing depression 
-              might feel like good experiences barely help while difficult ones feel overwhelming. This tool is designed to 
-              build empathy and understanding.
+              This mode demonstrates, mathematically, how depression can reshape decisions over time.
+              You will see confidence update asymmetrically, then watch higher-confidence actions become unavailable.
             </p>
           </div>
+          <SafetyNotice className="mb-6" />
+          <SupportResources className="mb-6" />
 
           {/* Explanation */}
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 mb-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-medium text-slate-100 mb-4 flex items-center gap-2">
               <div className="w-1 h-6 bg-gradient-to-b from-rose-500 to-pink-500 rounded-full"></div>
-              Understanding the Depression Filter
+              How This Mode Works
             </h2>
             
             <div className="space-y-6">
               <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 ">
-                <h3 className="font-medium text-slate-100 mb-2">What You'll Experience</h3>
+                <h3 className="font-medium text-slate-100 mb-2">Core Mechanism</h3>
                 <p className="text-slate-300 mb-4">
-                  In this simulation, you'll navigate scenarios with settings designed to model how depression might affect 
-                  confidence and decision-making. These settings are simplified representations for educational purposes:
+                  Confidence updates follow:
                 </p>
+                <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg mb-4">
+                  <p className="text-sm text-slate-300 font-mono">V(t+1) = V(t) + α[r - V(t)]</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    This mode uses α⁺ = 0.1 for positive updates and α⁻ = 0.8 for negative updates.
+                  </p>
+                </div>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <div className="flex items-center gap-2 mb-2">
@@ -162,7 +174,7 @@ function DepressionFilter({ setSelectedMode }) {
                     </div>
                     <p className="text-2xl font-medium text-green-400 mb-1">0.1</p>
                     <p className="text-sm text-slate-300">
-                      Good experiences barely help. Even when good things happen, your confidence barely increases.
+                      Good experiences only produce small recovery updates.
                     </p>
                   </div>
                   <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
@@ -174,45 +186,37 @@ function DepressionFilter({ setSelectedMode }) {
                     </div>
                     <p className="text-2xl font-medium text-red-400 mb-1">0.8</p>
                     <p className="text-sm text-slate-300">
-                      Bad experiences hit really hard. One bad moment can dramatically lower your confidence.
+                      Negative experiences produce large downward updates.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 ">
-                <h3 className="font-medium text-slate-100 mb-2">The Mental Filter Effect</h3>
+                <h3 className="font-medium text-slate-100 mb-2">What To Watch For (Realization Point)</h3>
                 <p className="text-slate-300 mb-3">
-                  Because good experiences barely help in this simulation, your confidence struggles to rise. In this model, 
-                  the "filter" manifests as:
+                  This is the key insight: as confidence drops, the decision space narrows.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-slate-300">
-                  <li><strong>Some choices become unavailable in the simulation</strong> - To represent how low confidence might 
-                  make certain actions feel impossible or overwhelming</li>
-                  <li><strong>Good outcomes barely help</strong> - Even when positive things happen, your confidence increases by 
-                  tiny amounts, representing how positive experiences might not feel as impactful</li>
-                  <li><strong>Difficult outcomes feel overwhelming</strong> - Negative experiences cause larger drops in confidence, 
-                  representing how challenging moments might feel more significant</li>
-                  <li><strong>Confidence struggles to recover</strong> - The filter model shows how it can feel difficult to build 
-                  confidence, even when positive things occur</li>
+                  <li><strong>Locked choices appear</strong> when required confidence exceeds current confidence.</li>
+                  <li><strong>Positive outcomes help less</strong>, so recovery is slow.</li>
+                  <li><strong>Negative outcomes dominate</strong>, causing repeated confidence loss.</li>
+                  <li><strong>Behavior changes naturally</strong> toward lower-effort, avoidance-style choices.</li>
                 </ul>
               </div>
 
               <div className="bg-slate-700/50 border-l-4 border-slate-600 p-4 rounded-lg">
-                <h3 className="font-medium text-slate-100 mb-2">How It Works</h3>
+                <h3 className="font-medium text-slate-100 mb-2">Instruction</h3>
                 <p className="text-sm text-slate-300 mb-3">
-                  In this simulation, your confidence changes based on what happens. The model uses these simplified settings:
+                  As you play, monitor two values:
                 </p>
                 <ul className="text-sm text-slate-300 space-y-2 list-disc list-inside mb-3">
-                  <li>When something <strong>good</strong> happens: Your confidence increases by only a tiny amount (0.1), 
-                  representing how positive experiences might feel less impactful</li>
-                  <li>When something <strong>difficult</strong> happens: Your confidence decreases by a larger amount (0.8), 
-                  representing how negative experiences might feel more significant</li>
+                  <li><strong>Net confidence trend</strong> from the starting point.</li>
+                  <li><strong>Number of blocked options</strong> caused by low confidence.</li>
                 </ul>
                 <p className="text-sm text-slate-300">
-                  This simplified model shows how it might feel difficult to build up confidence, while difficult experiences 
-                  might feel more impactful. This represents one conceptual way depression might affect someone's experience, 
-                  though it varies greatly from person to person.
+                  If confidence keeps falling and options keep locking, that is the intended realization:
+                  depression can change the update process itself, which then changes what actions feel possible.
                 </p>
               </div>
 
@@ -220,14 +224,10 @@ function DepressionFilter({ setSelectedMode }) {
                 <div className="flex items-start gap-3">
                   <ExclamationCircleIcon className="w-6 h-6 text-slate-400 flex-shrink-0 mt-1" />
                   <div>
-                    <h3 className="font-medium text-slate-100 mb-2">Understanding Through Simulation</h3>
+                    <h3 className="font-medium text-slate-100 mb-2">Interpretation</h3>
                     <p className="text-slate-300">
-                      This simulation is not about "thinking more positively" - it's designed to help you understand how 
-                      depression might affect how someone processes experiences. The model uses different learning rates to 
-                      represent how positive experiences might feel less impactful while difficult ones might feel more 
-                      significant. This simulation is meant to build empathy and awareness. Depression affects people 
-                      differently, and this is just one conceptual model to help illustrate the challenges some individuals 
-                      may face. Treatment and support can help people manage these experiences.
+                      This is not about motivation or character. The model shows how weighted learning from experience
+                      can produce avoidance and disengagement even without any intention to withdraw.
                     </p>
                   </div>
                 </div>
@@ -262,11 +262,38 @@ function DepressionFilter({ setSelectedMode }) {
       setPhase('finished');
       return null;
     }
+    const blockedChoicesNow = currentNode.choices
+      ? currentNode.choices.filter((choice) => isChoiceBlocked(choice, currentNode.choices, currentValue)).length
+      : 0;
+    const confidenceDeltaFromStart = currentValue - valueHistory[0];
 
     return (
       <div className="min-h-screen bg-slate-900 p-8">
         <div className="max-w-3xl mx-auto">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 rounded-lg shadow-xl">
+            <div className="mb-6 bg-gradient-to-br from-rose-900/20 to-pink-900/20 border border-rose-500/30 rounded-lg p-4">
+              <h3 className="text-slate-100 font-medium mb-2">Realization Tracker</h3>
+              <div className="grid md:grid-cols-3 gap-3 text-sm">
+                <div className="bg-slate-800/70 border border-slate-700 rounded p-3">
+                  <p className="text-slate-400">Net confidence change</p>
+                  <p className={`font-semibold ${confidenceDeltaFromStart < 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
+                    {confidenceDeltaFromStart >= 0 ? '+' : ''}{confidenceDeltaFromStart.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-slate-800/70 border border-slate-700 rounded p-3">
+                  <p className="text-slate-400">Blocked right now</p>
+                  <p className="font-semibold text-rose-300">{blockedChoicesNow}</p>
+                </div>
+                <div className="bg-slate-800/70 border border-slate-700 rounded p-3">
+                  <p className="text-slate-400">Blocked encountered</p>
+                  <p className="font-semibold text-rose-300">{blockedChoiceCount}</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-3">
+                Here, α⁺=0.1 and α⁻=0.8. This asymmetry is designed to show how decision freedom can shrink over time.
+              </p>
+            </div>
+
             {/* Progress indicator */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
@@ -416,6 +443,28 @@ function DepressionFilter({ setSelectedMode }) {
         <div className="max-w-4xl mx-auto">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 rounded-lg shadow-xl">
             <h2 className="text-3xl font-medium text-slate-100 mb-6 text-center">Experience Complete</h2>
+            <div className="bg-gradient-to-br from-rose-900/20 to-pink-900/20 border border-rose-500/30 rounded-lg p-5 mb-6">
+              <h3 className="text-slate-100 font-medium mb-2">Realization Summary</h3>
+              <p className="text-slate-300 text-sm mb-3">
+                This run demonstrates how mathematically biased updates can narrow behavior over time.
+              </p>
+              <div className="grid md:grid-cols-3 gap-3 text-sm">
+                <div className="bg-slate-800/70 border border-slate-700 rounded p-3">
+                  <p className="text-slate-400">Decision steps</p>
+                  <p className="font-semibold text-slate-200">{decisionStepCount}</p>
+                </div>
+                <div className="bg-slate-800/70 border border-slate-700 rounded p-3">
+                  <p className="text-slate-400">Blocked choices encountered</p>
+                  <p className="font-semibold text-rose-300">{blockedChoiceCount}</p>
+                </div>
+                <div className="bg-slate-800/70 border border-slate-700 rounded p-3">
+                  <p className="text-slate-400">Net confidence change</p>
+                  <p className={`font-semibold ${(currentValue - valueHistory[0]) < 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
+                    {(currentValue - valueHistory[0]) >= 0 ? '+' : ''}{(currentValue - valueHistory[0]).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
             
             {/* Final Outcome - integrated with confidence change */}
             {outcomeHistory.length > 0 && outcomeHistory[outcomeHistory.length - 1] && valueHistory.length >= 2 && (() => {
@@ -542,13 +591,9 @@ function DepressionFilter({ setSelectedMode }) {
             <div className="bg-gradient-to-br from-slate-700/50 to-slate-800/50 border-l-4 border-slate-600 p-6 mb-6 rounded-lg">
               <h3 className="font-medium text-slate-100 mb-2">Reflection</h3>
               <p className="text-slate-300">
-                Did you notice how many choices were blocked in this simulation? How even when positive things happened, 
-                your confidence barely increased? This simulation represents one conceptual model of how depression might 
-                feel - not just "feeling sad," but experiencing a pattern where positive experiences feel less impactful 
-                while negative ones feel more significant. This model illustrates how it might feel difficult to build 
-                confidence, creating a cycle that can be challenging. However, it's important to remember that depression 
-                affects people differently, and with appropriate treatment and support, many people find ways to manage 
-                and improve their wellbeing.
+                The main takeaway is process-level: when positive updates are tiny and negative updates are large, confidence
+                can decline into a range where many actions feel inaccessible. From the outside this can look like withdrawal,
+                but this model shows one mechanism for why that withdrawal can occur.
               </p>
             </div>
 
@@ -567,6 +612,7 @@ function DepressionFilter({ setSelectedMode }) {
                 ← Back to Modes
               </button>
             </div>
+            <SafetyNotice className="mt-6" />
           </div>
         </div>
       </div>

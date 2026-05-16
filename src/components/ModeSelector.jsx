@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CpuChipIcon, BoltIcon, BookOpenIcon, FunnelIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { getComparisonState, parseDecisionSnapshot, validateDecisionSnapshot } from '../utils/decisionSnapshot';
  // ============================================
 // MODE SELECTOR
 // ============================================
@@ -8,24 +9,68 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
     const [agentDecisions, setAgentDecisions] = useState(null);
     const [showComparison, setShowComparison] = useState(false);
 
+    const buildLegacyUserSteps = (snapshot) => {
+        if (!snapshot?.choices) {
+            return [];
+        }
+        return snapshot.choices.map((choice, index) => {
+            const isLastChoice = index === snapshot.choices.length - 1;
+            const hasTerminalOutcome = (snapshot.outcomes?.length || 0) > snapshot.choices.length;
+            const outcomeIndex = isLastChoice && hasTerminalOutcome
+                ? snapshot.outcomes.length - 1
+                : index;
+            const outcome = snapshot.outcomes?.[outcomeIndex] || null;
+            return {
+                stepIndex: index,
+                choice,
+                outcome,
+                confidenceChoice: choice?.confidenceLevel ?? null,
+                rewardDisplay: typeof outcome?.reward === 'number' ? ((outcome.reward - 4.5) / 3.5) * 10 : null,
+            };
+        });
+    };
+
+    const userStepsWithChoices = validateDecisionSnapshot(userDecisions)
+        ? userDecisions.steps.filter((step) => step.choice)
+        : buildLegacyUserSteps(userDecisions);
+    const agentStepsWithChoices = validateDecisionSnapshot(agentDecisions)
+        ? agentDecisions.steps.filter((step) => step.choice)
+        : agentDecisions?.path
+            ? agentDecisions.path.filter((step) => step.choice)
+            : [];
+    const comparisonState = getComparisonState({
+        userSnapshot: userDecisions,
+        agentSnapshot: agentDecisions,
+    });
+
     // Load decisions from localStorage
     useEffect(() => {
         const userData = localStorage.getItem('userDecisions');
         const agentData = localStorage.getItem('agentDecisions');
         
         if (userData) {
-            try {
-                setUserDecisions(JSON.parse(userData));
-            } catch (e) {
-                console.error('Error parsing user decisions:', e);
+            const parsedUserSnapshot = parseDecisionSnapshot(userData);
+            if (parsedUserSnapshot) {
+                setUserDecisions(parsedUserSnapshot);
+            } else {
+                try {
+                    setUserDecisions(JSON.parse(userData));
+                } catch (e) {
+                    console.error('Error parsing user decisions:', e);
+                }
             }
         }
         
         if (agentData) {
-            try {
-                setAgentDecisions(JSON.parse(agentData));
-            } catch (e) {
-                console.error('Error parsing agent decisions:', e);
+            const parsedAgentSnapshot = parseDecisionSnapshot(agentData);
+            if (parsedAgentSnapshot) {
+                setAgentDecisions(parsedAgentSnapshot);
+            } else {
+                try {
+                    setAgentDecisions(JSON.parse(agentData));
+                } catch (e) {
+                    console.error('Error parsing agent decisions:', e);
+                }
             }
         }
 
@@ -90,10 +135,7 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                                         };
 
                                         // If no user decisions, show message in first row
-                                        if (!userDecisions && agentDecisions) {
-                                            // Get agent steps with choices
-                                            const agentStepsWithChoices = agentDecisions.path.filter(p => p.choice);
-                                            
+                                        if (comparisonState === 'agentOnly') {
                                             return (
                                                 <>
                                                     <tr>
@@ -173,14 +215,10 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                                         }
 
                                         // User decisions exist but no agent decisions - show user decisions with button to run agent
-                                        if (userDecisions && !agentDecisions) {
-                                            return userDecisions.choices.map((userChoice, i) => {
-                                                // Get user outcome
-                                                const isLastChoice = i === userDecisions.choices.length - 1;
-                                                const outcomeIndex = isLastChoice && userDecisions.outcomes.length > userDecisions.choices.length 
-                                                    ? userDecisions.outcomes.length - 1 
-                                                    : i;
-                                                const userOutcome = userDecisions.outcomes[outcomeIndex];
+                                        if (comparisonState === 'userOnly') {
+                                            return userStepsWithChoices.map((userStep, i) => {
+                                                const userChoice = userStep.choice;
+                                                const userOutcome = userStep.outcome;
                                                 
                                                 return (
                                                     <tr key={i} className="border-b border-slate-700 hover:bg-slate-800/30 transition-colors">
@@ -241,27 +279,19 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                                         }
 
                                         // Both user and agent decisions exist - show comparison
-                                        if (userDecisions && agentDecisions) {
-                                            // Get agent steps with choices
-                                            const agentStepsWithChoices = agentDecisions.path.filter(p => p.choice);
-                                            
+                                        if (comparisonState === 'both') {
                                             // Determine max steps
                                             const maxSteps = Math.max(
-                                                userDecisions.choices.length,
+                                                userStepsWithChoices.length,
                                                 agentStepsWithChoices.length
                                             );
 
                                             const rows = [];
                                             for (let i = 0; i < maxSteps; i++) {
-                                                const userChoice = userDecisions.choices[i];
+                                                const userStep = userStepsWithChoices[i];
+                                                const userChoice = userStep?.choice;
                                                 const agentStep = agentStepsWithChoices[i];
-                                                
-                                                // Get user outcome
-                                                const isLastChoice = i === userDecisions.choices.length - 1;
-                                                const outcomeIndex = isLastChoice && userDecisions.outcomes.length > userDecisions.choices.length 
-                                                    ? userDecisions.outcomes.length - 1 
-                                                    : i;
-                                                const userOutcome = userDecisions.outcomes[outcomeIndex];
+                                                const userOutcome = userStep?.outcome;
 
                                                 rows.push(
                                                     <tr key={i} className="border-b border-slate-700 hover:bg-slate-800/30 transition-colors">
@@ -499,8 +529,21 @@ function ModeSelector({ setSelectedMode }) { // 👈 Accept setSelectedMode as p
                     </div>
                 </div>
 
-                {/* Show comparison button if data exists */}
-                {(userDecisions && agentDecisions) || (agentDecisions && !userDecisions) ? (
+                <div className="mt-8 max-w-4xl mx-auto bg-slate-800/60 border border-slate-700 rounded-lg p-5">
+                    <h3 className="text-slate-100 font-semibold mb-2">How comparison works</h3>
+                    <p className="text-sm text-slate-400">
+                        Outcome Mode generates your decision snapshot, and Agent Mode generates the agent snapshot. Once either snapshot exists,
+                        you can open comparison view. Full side-by-side comparison is available when both snapshots are present.
+                    </p>
+                    <p className="text-sm text-slate-300 mt-3">
+                        {comparisonState === 'none' && 'Status: no snapshots yet. Play Outcome Mode and Agent Mode to unlock comparison.'}
+                        {comparisonState === 'userOnly' && 'Status: your snapshot is ready. Run Agent Mode for full side-by-side comparison.'}
+                        {comparisonState === 'agentOnly' && 'Status: agent snapshot is ready. Play Outcome Mode for full side-by-side comparison.'}
+                        {comparisonState === 'both' && 'Status: both snapshots are ready for full comparison.'}
+                    </p>
+                </div>
+
+                {comparisonState !== 'none' ? (
                     <div className="mt-8 text-center">
                         <button
                             onClick={() => {

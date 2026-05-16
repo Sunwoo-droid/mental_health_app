@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { ArrowRightIcon, ArrowPathIcon, BoltIcon, ChartBarIcon, AcademicCapIcon, LightBulbIcon } from '@heroicons/react/24/outline';
 import { storyNodes } from './StoryNodes';
+import { tdUpdate } from '../utils/simulationMath';
+import { buildStepsFromAgentPath, createDecisionSnapshot } from '../utils/decisionSnapshot';
+import SafetyNotice from './SafetyNotice';
+import SupportResources from './SupportResources';
 
 // ============================================
 // AGENT MODE COMPONENT
@@ -63,20 +67,20 @@ function AgentMode({ setSelectedMode }) {
       // If this is a terminal node, apply outcome and end
       if (node.isTerminal) {
         const outcome = node.outcome;
-        const normalizedReward = 5 + (outcome.reward * 0.4);
-        const rpe = normalizedReward - currentValue;
-        // Select learning rate based on RPE sign
-        // If RPE is positive (reward > expected), use positive learning rate (confidence increases)
-        // If RPE is negative (reward < expected), use negative learning rate (confidence decreases)
-        const alpha = rpe > 0 
-          ? agentParameters.positiveLearningRate 
-          : agentParameters.negativeLearningRate;
-        // When rpe < 0 and alpha > 0, this formula correctly decreases confidence:
-        // newValue = currentValue + (alpha * negative_rpe) = currentValue - (alpha * |rpe|)
-        const newValue = currentValue + (alpha * rpe);
-        currentValue = Math.max(0, Math.min(10, newValue));
+        const tdResult = tdUpdate({
+          currentValue,
+          reward: outcome.reward,
+          positiveLearningRate: agentParameters.positiveLearningRate,
+          negativeLearningRate: agentParameters.negativeLearningRate,
+        });
+        currentValue = tdResult.nextValue;
         pathData.valueHistory.push(currentValue);
-        pathData.rpeHistory.push({ rpe, alpha, reward: outcome.reward, normalizedReward });
+        pathData.rpeHistory.push({
+          rpe: tdResult.rpe,
+          alpha: tdResult.alpha,
+          reward: outcome.reward,
+          normalizedReward: tdResult.normalizedReward,
+        });
         pathData.path.push({ node, choice: null, outcome: node.outcome, value: currentValue });
         break;
       }
@@ -104,19 +108,21 @@ function AgentMode({ setSelectedMode }) {
       let outcome = null;
       if (node.outcome) {
         outcome = node.outcome;
-        const normalizedReward = 5 + (outcome.reward * 0.4);
-        const rpe = normalizedReward - currentValue;
-        // Select learning rate based on RPE sign
-        // If RPE is positive (reward > expected), use positive learning rate (confidence increases)
-        // If RPE is negative (reward < expected), use negative learning rate (confidence decreases)
-        const alpha = rpe > 0 
-          ? agentParameters.positiveLearningRate 
-          : agentParameters.negativeLearningRate;
-        // When rpe < 0 and alpha > 0, this formula correctly decreases confidence:
-        // newValue = currentValue + (alpha * negative_rpe) = currentValue - (alpha * |rpe|)
-        const newValue = currentValue + (alpha * rpe);
-        currentValue = Math.max(0, Math.min(10, newValue));
-        pathData.rpeHistory.push({ rpe, alpha, reward: outcome.reward, normalizedReward, oldValue: pathData.valueHistory[pathData.valueHistory.length - 1], newValue: currentValue });
+        const tdResult = tdUpdate({
+          currentValue,
+          reward: outcome.reward,
+          positiveLearningRate: agentParameters.positiveLearningRate,
+          negativeLearningRate: agentParameters.negativeLearningRate,
+        });
+        currentValue = tdResult.nextValue;
+        pathData.rpeHistory.push({
+          rpe: tdResult.rpe,
+          alpha: tdResult.alpha,
+          reward: outcome.reward,
+          normalizedReward: tdResult.normalizedReward,
+          oldValue: pathData.valueHistory[pathData.valueHistory.length - 1],
+          newValue: currentValue,
+        });
         // Push updated value to history after applying outcome
         pathData.valueHistory.push(currentValue);
       }
@@ -135,13 +141,20 @@ function AgentMode({ setSelectedMode }) {
     setPhase('comparison');
     
     // Store agent decisions in localStorage
-    const agentDecisions = {
+    const steps = buildStepsFromAgentPath({
       path: pathData.path,
-      choices: pathData.choices,
       valueHistory: pathData.valueHistory,
-      parameters: agentParameters,
-      timestamp: Date.now()
-    };
+    });
+    const agentDecisions = createDecisionSnapshot({
+      source: 'agent-mode',
+      steps,
+      valueHistory: pathData.valueHistory,
+      metadata: {
+        path: pathData.path,
+        choices: pathData.choices,
+        parameters: agentParameters,
+      },
+    });
     localStorage.setItem('agentDecisions', JSON.stringify(agentDecisions));
   };
 
@@ -168,6 +181,8 @@ function AgentMode({ setSelectedMode }) {
               Experiment with how different "personality settings" affect someone's experience. Adjust how much 
               someone is affected by good vs. bad experiences, then watch how an AI agent navigates the same scenarios.
             </p>
+            <SafetyNotice className="mb-6" />
+            <SupportResources className="mb-8" />
 
             {/* Current Parameters */}
             <div className="mb-8">
@@ -778,6 +793,7 @@ function AgentMode({ setSelectedMode }) {
                 <ArrowPathIcon className="w-5 h-5" /> Adjust Parameters
               </button>
             </div>
+            <SafetyNotice className="mt-6" />
           </div>
         </div>
       </div>

@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { CpuChipIcon, ChartBarIcon, ArrowRightIcon, ArrowPathIcon, BookOpenIcon, HeartIcon, PhoneIcon, AcademicCapIcon, LightBulbIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { storyNodes } from './StoryNodes';
+import SafetyNotice from './SafetyNotice';
+import SupportResources from './SupportResources';
+import {
+  convertRewardToDisplayScale,
+  estimateLearningRatesFromChoices,
+  tdUpdate,
+} from '../utils/simulationMath';
+import {
+  buildStepsFromChoiceOutcomeHistories,
+  createDecisionSnapshot,
+  parseDecisionSnapshot,
+} from '../utils/decisionSnapshot';
 
 // ============================================
 // OUTCOME MODE: Choose-Your-Own-Adventure
@@ -37,6 +49,11 @@ function OutcomeMode({ setSelectedMode }) {
   useEffect(() => {
     const agentData = localStorage.getItem('agentDecisions');
     if (agentData) {
+      const parsedSnapshot = parseDecisionSnapshot(agentData);
+      if (parsedSnapshot) {
+        setAgentDecisions(parsedSnapshot);
+        return;
+      }
       try {
         setAgentDecisions(JSON.parse(agentData));
       } catch (e) {
@@ -55,80 +72,21 @@ function OutcomeMode({ setSelectedMode }) {
   // TD LEARNING FUNCTIONS
   // ============================================
 
-  // Convert reward from 1-8 scale to -10 to +10 scale
-  // 1 → -10, 4.5 → 0, 8 → +10
-  const convertRewardToDisplayScale = (reward) => {
-    return ((reward - 4.5) / 3.5) * 10;
-  };
-
   const updateValueWithTD = (reward, currentVal) => {
-    // Convert reward from 1-8 scale to -10 to +10 scale
-    const convertedReward = convertRewardToDisplayScale(reward);
-    
-    // Normalize reward to 0-10 scale for TD learning
-    const normalizedReward = 5 + (convertedReward * 0.5);
-    
-    // Calculate Reward Prediction Error
-    const rpe = normalizedReward - currentVal;
-    
-    // Select learning rate based on outcome sign
-    const alpha = rpe > 0 ? positiveLearningRate : negativeLearningRate;
-    
-    // TD Update: V(t+1) = V(t) + α[r - V(t)]
-    const newValue = currentVal + (alpha * rpe);
-    
-    // Clamp to 0-10 range
-    return Math.max(0, Math.min(10, newValue));
+    return tdUpdate({
+      currentValue: currentVal,
+      reward,
+      positiveLearningRate,
+      negativeLearningRate,
+    }).nextValue;
   };
 
   const estimateLearningRates = () => {
-    if (outcomeHistory.length < 2) {
-      return { positiveLearningRate: 0.5, negativeLearningRate: 0.5 };
-    }
-
-    let positiveUpdates = [];
-    let negativeUpdates = [];
-
-    // Analyze how confidence changed after each outcome
-    for (let i = 0; i < outcomeHistory.length - 1; i++) {
-      const outcome = outcomeHistory[i];
-      const currentConf = choiceHistory[i]?.confidenceLevel || 5;
-      const nextConf = choiceHistory[i + 1]?.confidenceLevel || 5;
-      
-      const confidenceChange = nextConf - currentConf;
-      const convertedReward = convertRewardToDisplayScale(outcome.reward);
-      
-      if (convertedReward > 0) {
-        positiveUpdates.push({
-          reward: convertedReward,
-          change: confidenceChange,
-          impliedAlpha: Math.max(0, confidenceChange / convertedReward)
-        });
-      } else if (convertedReward < 0) {
-        negativeUpdates.push({
-          reward: convertedReward,
-          change: confidenceChange,
-          impliedAlpha: Math.max(0, -confidenceChange / Math.abs(convertedReward))
-        });
-      }
-    }
-
-    const avgPositiveAlpha = positiveUpdates.length > 0
-      ? positiveUpdates.reduce((sum, u) => sum + u.impliedAlpha, 0) / positiveUpdates.length
-      : 0.5;
-      
-    const avgNegativeAlpha = negativeUpdates.length > 0
-      ? negativeUpdates.reduce((sum, u) => sum + u.impliedAlpha, 0) / negativeUpdates.length
-      : 0.5;
-
-    // Clamp to reasonable range
-    const finalPositiveAlpha = Math.min(0.9, Math.max(0.1, avgPositiveAlpha * 0.8));
-    const finalNegativeAlpha = Math.min(0.9, Math.max(0.1, avgNegativeAlpha * 0.8));
-
-    return {
-      positiveLearningRate: parseFloat(finalPositiveAlpha.toFixed(2)),
-      negativeLearningRate: parseFloat(finalNegativeAlpha.toFixed(2))
-    };
+    return estimateLearningRatesFromChoices({
+      choices: choiceHistory,
+      outcomes: outcomeHistory,
+      rewardTransform: (reward) => convertRewardToDisplayScale(reward),
+    });
   };
 
   // ============================================
@@ -158,15 +116,15 @@ function OutcomeMode({ setSelectedMode }) {
           updatedOutcomeHistory = [...updatedOutcomeHistory, nextNode.outcome];
           
           // Update value using TD learning
-          updatedCurrentValue = updateValueWithTD(nextNode.outcome.reward, updatedCurrentValue);
+          const tdResult = tdUpdate({
+            currentValue: updatedCurrentValue,
+            reward: nextNode.outcome.reward,
+            positiveLearningRate,
+            negativeLearningRate,
+          });
+          updatedCurrentValue = tdResult.nextValue;
           updatedValueHistory = [...updatedValueHistory, updatedCurrentValue];
-          
-          // Calculate RPE for history
-          const convertedReward = convertRewardToDisplayScale(nextNode.outcome.reward);
-          const normalizedReward = 5 + (convertedReward * 0.5);
-          const rpe = normalizedReward - currentValue;
-          const alpha = rpe > 0 ? positiveLearningRate : negativeLearningRate;
-          setRpeHistory([...rpeHistory, { rpe, alpha, reward: convertedReward }]);
+          setRpeHistory([...rpeHistory, { rpe: tdResult.rpe, alpha: tdResult.alpha, reward: tdResult.displayReward }]);
           
           // Update state
           setOutcomeHistory(updatedOutcomeHistory);
@@ -219,12 +177,20 @@ function OutcomeMode({ setSelectedMode }) {
   // Store user decisions when game finishes
   useEffect(() => {
     if (phase === 'finished' && choiceHistory.length > 0) {
-      const userDecisions = {
+      const steps = buildStepsFromChoiceOutcomeHistories({
         choices: choiceHistory,
         outcomes: outcomeHistory,
-        valueHistory: valueHistory,
-        timestamp: Date.now()
-      };
+        valueHistory,
+      });
+      const userDecisions = createDecisionSnapshot({
+        source: 'outcome-mode',
+        steps,
+        valueHistory,
+        metadata: {
+          choices: choiceHistory,
+          outcomes: outcomeHistory,
+        },
+      });
       localStorage.setItem('userDecisions', JSON.stringify(userDecisions));
     }
   }, [phase, choiceHistory, outcomeHistory, valueHistory]);
@@ -257,6 +223,8 @@ function OutcomeMode({ setSelectedMode }) {
               Get an evaluation of your "depression" levels using confidence levels and learning rates.
             </p>
           </div>
+          <SafetyNotice className="mb-6" />
+          <SupportResources className="mb-6" />
 
           {/* Stats Dashboard */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -427,7 +395,11 @@ function OutcomeMode({ setSelectedMode }) {
 
           {/* Journey Summary - Table Format */}
           {choiceHistory.length > 0 && (() => {
-            const agentStepsWithChoices = agentDecisions ? agentDecisions.path.filter(p => p.choice) : [];
+            const agentStepsWithChoices = agentDecisions?.steps
+              ? agentDecisions.steps.filter((step) => step.choice)
+              : agentDecisions?.path
+                ? agentDecisions.path.filter((p) => p.choice)
+                : [];
 
             return (
               <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-6 mb-6 rounded-lg shadow-lg">
@@ -507,9 +479,9 @@ function OutcomeMode({ setSelectedMode }) {
                                       Confidence: {agentStep.choice.confidenceLevel}/10
                                     </span>
                                     {agentStep.outcome && (() => {
-                                      // Convert agent outcome reward (1-8 scale) to display scale
-                                      const agentReward = agentStep.outcome.reward;
-                                      const displayReward = ((agentReward - 4.5) / 3.5) * 10;
+                                      const displayReward = typeof agentStep.rewardDisplay === 'number'
+                                        ? agentStep.rewardDisplay
+                                        : convertRewardToDisplayScale(agentStep.outcome.reward);
                                       const isPositive = displayReward > 0;
                                       return (
                                         <span className={`text-xs font-medium ${
@@ -925,6 +897,7 @@ function OutcomeMode({ setSelectedMode }) {
                 </div>
               </div>
             </div>
+            <SafetyNotice className="mb-6" />
 
             {/* Actions */}
             <div className="flex flex-wrap gap-4">
